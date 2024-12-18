@@ -387,7 +387,7 @@ kubectl auth can-i get pods --as=system:serviceaccount:default:default
 
 kubectl auth can-i --list
 
-## **STORAGECLASS]]]
+## **STORAGECLASS**
 # set sc as default
 kubectl patch storageclass nfs-client -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}' && kubectl patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
 
@@ -405,5 +405,3 @@ kubectl patch pvc <name of PVC> --namespace <namespace> --type merge --patch $ne
 ##### identify log path #####
 kubectl get pod pod-name -ojsonpath='{.status.containerStatuses[0].containerID}'
 docker inspect container-id | grep -i logpath
-
-
