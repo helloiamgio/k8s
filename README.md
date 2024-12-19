@@ -59,6 +59,9 @@ kubectl get pod --all-namespaces | awk '{print $3}' | awk -F/ '{s+=$1} END {prin
 ### get pods x nodes ### 
 kubectl get pods --all-namespaces -o wide --field-selector spec.nodeName=
 
+### get pods x namespace ### 
+kubectl get pods --all-namespaces --no-headers -o custom-columns="Namespace:.metadata.namespace" | sort | uniq -c | awk '{print "Namespace: "$2, "Pods: "$1}'
+
 ### get pod using column ###
 kubectl get pods --all-namespaces -o=custom-columns=NAME:.metadata.name,Namespace:.metadata.namespace
 
