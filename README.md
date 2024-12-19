@@ -720,7 +720,7 @@ kubectl auth can-i --list
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ```
-### set sc as default
+### set sc as default ###
 kubectl patch storageclass nfs-client -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}' && kubectl patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
 ```
 
@@ -777,7 +777,7 @@ kubectl get pods -n ping -o go-template --template='{{range .items}}{{"pod: "}}{
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ```
-### identify log path #####
+### identify log path ###
 kubectl get pod pod-name -ojsonpath='{.status.containerStatuses[0].containerID}'
 docker inspect container-id | grep -i logpath
 ```
