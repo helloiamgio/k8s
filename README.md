@@ -383,6 +383,29 @@ kubectl get pods -o json | jq '.items[].spec.containers[].env[]?.valueFrom.secre
 kubectl get cm <NOME-CONFIGMAP> -o jsonpath='{.data.ballerina\.conf}' > ballerina.conf
 kubectl get cm 3-2-0-wso2apim-gw-worker-conf -o template='{{ index .data "deployment.toml" }}'
 
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## **RBAC**
+### Check to see if I can do everything in my current namespace ("*" means all) ###
+kubectl auth can-i '*' '*'
+
+### Check to see if I can create pods in any namespace ###
+kubectl auth can-i create pods --all-namespaces
+
+###  Check to see if I can list deployments in my current namespace ###
+kubectl auth can-i list deployments.extensions
+
+### Check permission for account ###
+kubectl auth can-i get pods --as=system:serviceaccount:default:default
+
+kubectl auth can-i --list
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## **STORAGECLASS**
+
+### set sc as default
+kubectl patch storageclass nfs-client -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}' && kubectl patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
