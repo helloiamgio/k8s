@@ -257,7 +257,6 @@ kubectl config set-context --current --namespace=ggckad-s2
 kubectl config set-context gce --user=cluster-admin --namespace=foo \
   && kubectl config use-context gce
 
-```
 kubectl config unset users.foo                       # delete user foo
 ```
 
