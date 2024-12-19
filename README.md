@@ -373,8 +373,9 @@ kubectl set resources deployment nginx --limits cpu=0,memory=0 --requests cpu=0,
 ### UPDATE RESOURCES DEPLOY ### 
 ```
 kubectl patch deployment velero -n velero --patch \
-```
+
 '{"spec":{"template":{"spec":{"containers":[{"name": "velero", "resources": {"limits":{"cpu": "1", "memory": "512Mi"}, "requests": {"cpu": "1", "memory": "128Mi"}}}]}}}}'
+```
 
 ### ROLLOUT DEPLOY ### 
 ```
