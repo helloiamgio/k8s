@@ -4,19 +4,19 @@
 https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/
 
 ### Install ###
-curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+`curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
 curl -LO https://dl.k8s.io/release/v1.32.0/bin/linux/amd64/kubectl
 
 chmod +x kubectl
 mkdir -p ~/.local/bin
-mv ./kubectl ~/.local/bin/kubectl
+mv ./kubectl ~/.local/bin/kubectl`
 
 ### Autocompletion ###
-echo 'alias k=kubectl' >> ~/.bashrc ; 
+`echo 'alias k=kubectl' >> ~/.bashrc ; 
 echo 'source <(kubectl completion bash)' >> ~/.bashrc ; 
 echo 'complete -F __start_kubectl k' >> ~/.bashrc ; 
 echo 'source <(kubectl completion bash | sed 's/kubectl/k/g')' >> ~/.bashrc ; 
-echo "source <(kubectl completion bash | sed 's|__start_kubectl kubectl|__start_kubectl ks|g') >> ~/.bashrc
+echo "source <(kubectl completion bash | sed 's|__start_kubectl kubectl|__start_kubectl ks|g') >> ~/.bashrc`
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ## **POD**
