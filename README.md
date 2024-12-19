@@ -79,32 +79,32 @@ kubectl get pod -o custom-columns="POD-NAME":.metadata.name,"NAMESPACE":.metadat
 
 ### INTERACT with POD ###
 
-kubectl logs my-pod                                 --> dump pod logs (stdout)
-kubectl logs -l name=myLabel                        --> dump pod logs, with label name=myLabel (stdout)
-kubectl logs my-pod --previous                      --> dump pod logs (stdout) for a previous instantiation of a container
-kubectl logs my-pod -c my-container                 --> dump pod container logs (stdout, multi-container case)
-kubectl logs -l name=myLabel -c my-container        --> dump pod logs, with label name=myLabel (stdout)
-kubectl logs my-pod -c my-container --previous      --> dump pod container logs (stdout, multi-container case) for a previous instantiation of a container
-kubectl logs -f my-pod                              --> stream pod logs (stdout)
-kubectl logs -f my-pod -c my-container              --> stream pod container logs (stdout, multi-container case)
-kubectl logs -f -l name=myLabel --all-containers    --> stream all pods logs with label name=myLabel (stdout)
-kubectl run -i --tty busybox --image=busybox:1.28 -- sh  --> Run pod as interactive shell
-kubectl run nginx --image=nginx -n mynamespace      --> Start a single instance of nginx pod in the namespace of mynamespace
-kubectl run nginx --image=nginx                     --> Run pod nginx and write its spec into a file called pod.yaml
---dry-run=client -o yaml > pod.yaml
+kubectl logs my-pod                                 
+kubectl logs -l name=myLabel                        
+kubectl logs my-pod --previous                      
+kubectl logs my-pod -c my-container                 
+kubectl logs -l name=myLabel -c my-container        
+kubectl logs my-pod -c my-container --previous      
+kubectl logs -f my-pod                              
+kubectl logs -f my-pod -c my-container              
+kubectl logs -f -l name=myLabel --all-containers    
+kubectl run -i --tty busybox --image=busybox:1.28 -- sh
+kubectl run nginx --image=nginx -n mynamespace
+kubectl run nginx --image=nginx --dry-run=client -o yaml > pod.yaml
 
-kubectl attach my-pod -i                            --> Attach to Running Container
-kubectl port-forward my-pod 5000:6000               --> Listen on port 5000 on the local machine and forward to port 6000 on my-pod
-kubectl exec my-pod -- ls /                         --> Run command in existing pod (1 container case)
-kubectl exec --stdin --tty my-pod -- /bin/sh        --> Interactive shell access to a running pod (1 container case)
-kubectl exec my-pod -c my-container -- ls /         --> Run command in existing pod (multi-container case)
-kubectl top pod POD_NAME --containers               --> Show metrics for a given pod and its containers
-kubectl top pod POD_NAME --sort-by=cpu              --> Show metrics for a given pod and sort it by 'cpu' or 'memory'
+kubectl attach my-pod -i
+kubectl port-forward my-pod 5000:6000
+kubectl exec my-pod -- ls / 
+kubectl exec --stdin --tty my-pod -- /bin/sh
+kubectl exec my-pod -c my-container -- ls /
+kubectl top pod POD_NAME --containers
+kubectl top pod POD_NAME --sort-by=cpu
+kubectl top pod POD_NAME --sort-by=memory
 
-kubectl cp /tmp/foo_dir my-pod:/tmp/bar_dir            --> Copy /tmp/foo_dir local directory to /tmp/bar_dir in a remote pod in the current namespace
-kubectl cp /tmp/foo my-pod:/tmp/bar -c my-container    --> Copy /tmp/foo local file to /tmp/bar in a remote pod in a specific container
-kubectl cp /tmp/foo my-namespace/my-pod:/tmp/bar       --> Copy /tmp/foo local file to /tmp/bar in a remote pod in namespace my-namespace
-kubectl cp my-namespace/my-pod:/tmp/foo /tmp/bar       --> Copy /tmp/foo from a remote pod to /tmp/bar locally
+kubectl cp /tmp/foo_dir my-pod:/tmp/bar_dir
+kubectl cp /tmp/foo my-pod:/tmp/bar -c my-container
+kubectl cp /tmp/foo my-namespace/my-pod:/tmp/bar
+kubectl cp my-namespace/my-pod:/tmp/foo /tmp/bar
 
 kubectl logs mypod --since-time=2023-05-02T07:00:00Z --tail=100
 kubectl logs <nome_pod> --timestamps | awk '/^[[:space:]]*[0-9]{4}-[0-9]{2}-[0-9]{2} 10:1[5-9]:|10:2[0-9]:/ {print}'
