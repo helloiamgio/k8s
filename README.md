@@ -51,8 +51,8 @@ kubectl exec -it --namespace=<NAMESPACE> <pod> -- bash (-c "mongo")
 ```
 
 ### describe pod with particular label ###
-pod=$(kubectl get pods --selector="name=frontend" --output=jsonpath={.items..metadata.name})
 ```
+pod=$(kubectl get pods --selector="name=frontend" --output=jsonpath={.items..metadata.name})
 kubectl describe pod $pod
 ```
 
