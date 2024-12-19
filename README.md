@@ -180,4 +180,66 @@ kubectl get events --sort-by=.metadata.creationTimestamp
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+## **DEPLOY**
+
+### restart pod graceful ### 
+k get deploy
+k rollout restart deployment ncp-3ds
+
+### change Deployment Image ###
+kubectl set image deployment/application app-container=$IMAGE
+
+### ROLLOUT RESTART under 1.15 kubectl  ###
+kubectl patch deployment NOMEDEPLOY -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"date\":\"`date +'%s'`\"}}}}}"
+
+### restart updating dummy ENV ### 
+kubectl set env deploy/<DEPLOY> MYVAR=$(date)
+
+### RESTART ALL DEPLOYMENT in THE CLUSTER ###
+kubectl get deployments --all-namespaces | tail +2 | awk '{ cmd=sprintf("kubectl rollout restart deployment -n %s %s", $1, $2) ; system(cmd) }'
+
+### RESTART ALL DEPLOYMENT in a NAMESPACE ###
+kubectl get deployments -n 2a-cil -o custom-columns=NAME:.metadata.name|grep -iv NAME|while read LINE; do kubectl rollout restart deployment $LINE -n 2a-cil ; done
+
+### SCALE DOWN ###
+cat all_deployment.txt | grep -v "0/0" | grep -v NAME | grep -v kube-system | grep -v istio-system | while read ns dep more ; do kubectl scale deployment $dep -n $ns --replicas=0; done
+
+### SCALE UP ###
+cat all_deployment.txt | grep -v "0/0" | grep -v NAME | grep -v istio-system | grep -v kube-system | while read ns dep rep more; do replica=$(echo $rep | cut -f2 -d "/"); kubectl scale deployment $dep -n $ns --replicas=$replica; done
+
+### Retrieve Original Replicas ###
+replica_spec=$(kubectl get deployment/applicatiom -o jsonpath='{.spec.replicas}')
+kubectl scale --replicas=0 deployment application
+kubectl scale --replicas=$replica_spec deployment application
+
+### BACKUP DEPLOY ### 
+for i in $(kubectl get deployments --no-headers -o custom-columns=":metadata.name"); do k get deploy $i -o yaml > $i-deploy.yaml; done
+
+### SET RESOURCES DEPLOY ### 
+kubectl set resources deployment nginx --limits cpu=200m,memory=512Mi --requests cpu=100m,memory=256Mi
+
+### REMOVE RESOURCES DEPLOY ### 
+kubectl set resources deployment nginx --limits cpu=0,memory=0 --requests cpu=0,memory=0
+
+### UPDATE RESOURCES DEPLOY ### 
+kubectl patch deployment velero -n velero --patch \
+'{"spec":{"template":{"spec":{"containers":[{"name": "velero", "resources": {"limits":{"cpu": "1", "memory": "512Mi"}, "requests": {"cpu": "1", "memory": "128Mi"}}}]}}}}'
+
+### ROLLOUT DEPLOY ### 
+kubectl rollout status deployment nginx
+
+kubectl rollout pause deployment nginx
+kubectl rollout resume deployment nginx
+kubectl rollout history deployment nginx
+kubectl rollout undo deployments nginx (--to-revision 3)
+
+### Disable a deployment livenessProbe using a json patch with positional arrays ###
+kubectl patch deployment valid-deployment  --type json   -p='[{"op": "remove", "path": "/spec/template/spec/containers/0/livenessProbe"}]'
+
+### PATCH Image Policy ###
+kubectl get deployments -o name | sed -e 's/.*\///g' | xargs -I {} kubectl patch deployment {} --type=json -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/imagePullPolicy", "value": "IfNotPresent"}]'
+
+### Restart ALL DEPLOY in a namespace ###
+kubectl get deployments -n <NAMESPACE> -o custom-columns=NAME:.metadata.name|grep -iv NAME|while read LINE; do kubectl rollout restart deployment $LINE -n <NameSpace Name> ; done;
+kubectl rollout restart deployment -n <NAMESPACE>
 
