@@ -71,11 +71,21 @@ kubectl get po -o json --all-namespaces | jq -j '.items[] | "\(.metadata.namespa
 ### Pod termination message ###
 kubectl get pod termination-demo -o go-template="{{range .status.containerStatuses}}{{.lastState.terminated.message}}{{end}}"
 
-### delete evicted pods ### 
+### Delete Completed pods ### 
+$ oc delete pod --field-selector=status.phase==Succeeded --all-namespaces
+$ oc get pods --all-namespaces |  awk '{if ($4 == "Completed") system ("oc delete pod " $2 " -n " $1 )}'
+
+### Additional methods to remove Failed, Pending, Evicted, and all 'Non-Running' pods: ###
+$ oc delete pod --field-selector=status.phase==Failed --all-namespaces
+$ oc delete pod --field-selector=status.phase==Pending --all-namespaces
+$ oc delete pod --field-selector=status.phase==Evicted --all-namespaces
+$ oc get pods --all-namespaces |  awk '{if ($4 != "Running") system ("oc delete pod " $2 " -n " $1 )}'
+
+### Delete Evicted pods ### 
 for POD in $(kubectl get pods|grep Evicted|awk '{print $1}'); do kubectl delete pods $POD ; done
 kubectl get po -A --all-namespaces -o json | jq  '.items[] | select(.status.reason!=null) | select(.status.reason | contains("Evicted")) | "kubectl delete po \(.metadata.name) -n \(.metadata.namespace)"' | xargs -n 1 bash -c
 
-### delete ALL Terminating pods ### 
+### Delete ALL Terminating pods ### 
 kubectl get pods --all-namespaces | awk '$4=="Terminating" {print "kubectl delete pod --force --grace-period=0 --namespace="$1" "$2}'
 
 ### logs tail ### 
@@ -84,7 +94,7 @@ k logs -f NOMEPOD --tail=10
 ### logs degli ultimi x minuti ### 
 k logs -f NOMEPOD --since=30m
 
-### check reason for evicted pods ### 
+### Check reason for evicted pods ### 
 kubectl get pod -A -o json | jq '.items##### #####  | select(.status.reason=="Evicted") | {NAME:.metadata.name, NAMESPACE:.metadata.namespace, REASON:.status.reason, MESSAGE:.status.message}'
 
 ### Produce ENV for all pods, assuming you have a default container for the pods, default namespace and the `env` command is supported. Helpful when running any supported command across all pods, not just `env` ###
