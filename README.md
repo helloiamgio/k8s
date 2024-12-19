@@ -140,10 +140,14 @@ kubectl get pods --all-namespaces | awk '$4=="Terminating" {print "kubectl delet
 ```
 
 ### logs tail ### 
+```
 k logs -f NOMEPOD --tail=10
+```
 
 ### logs degli ultimi x minuti ### 
+```
 k logs -f NOMEPOD --since=30m
+```
 
 ### Check reason for evicted pods ### 
 ```
