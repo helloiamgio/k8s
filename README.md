@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ## **KUBECTL**
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/
 
 ### Install ###
@@ -19,7 +20,7 @@ echo "source <(kubectl completion bash | sed 's|__start_kubectl kubectl|__start_
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ## **POD**
-
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ### pod request/limits ###
 kubectl get $i -o=jsonpath='{range .spec.containers[*]}{"Container Name: "}{.name}{"\n"}{"Requests:"}{.resources.requests}{"\n"}{"Limits:"}{.resources.limits}{"\n"}{end}' -n <NAMESPACE>
 kubectl get pods --all-namespaces -o jsonpath='{range .items[*]}{.metadata.name}{":\t"}{.spec.containers[0].resources.limits}{"\n"}{end}' 
@@ -130,8 +131,8 @@ kubectl logs mypod --since-time=2023-05-02T07:00:00Z --tail=100
 kubectl logs <nome_pod> --timestamps | awk '/^[[:space:]]*[0-9]{4}-[0-9]{2}-[0-9]{2} 10:1[5-9]:|10:2[0-9]:/ {print}'
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 ## **NAMESPACES/CONTEXT**
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ### use multiple kubeconfig files at the same time and view merged config ###
 KUBECONFIG=~/.kube/config:~/.kube/kubconfig2
@@ -180,8 +181,8 @@ kubectl api-resources --verbs=list --namespaced -o name   | xargs -n 1 kubectl g
 kubectl get quota --all-namespaces -o=custom-columns=Project:.metadata.namespace,TotalPods:.status.used.pods,TotalCPURequest:.status.used.requests'\.'cpu,TotalCPULimits:.status.used.limits'\.'cpu,TotalMemoryRequest:.status.used.requests'\.'memory,TotalMemoryLimit:.status.used.limits'\.'memory
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 ## **EVENTS**
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ### get event sort by creation ###
 kubectl get events --sort-by=.metadata.creationTimestamp
@@ -193,8 +194,8 @@ kubectl get events --all-namespaces --field-selector type=Warning
 kubectl get events --sort-by=.metadata.creationTimestamp
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 ## **DEPLOY**
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ### restart pod graceful ### 
 k get deploy
@@ -267,8 +268,8 @@ for deployment_name in $deployment_names; do
 done
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 ## **AFFINITY/NODESELECTOR/LABEL*
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 kubectl run newpod --image image1 --overrides='{ "spec": { "affinity": { "nodeAffinity": { "requiredDuringSchedulingIgnoredDuringExecution": { "nodeSelectorTerms": [{ "matchExpressions": [{ "key": "kubernetes.io/hostname",  "operator": "In", "values": [ "one-worker-node", "second-worker-node" ]} ]} ]} } } } }'
 
@@ -312,8 +313,8 @@ kubectl get pods --namespace=$(kubectl config view --minify --output 'jsonpath={
 kubectl get deployments --namespace=$(kubectl config view --minify --output 'jsonpath={..namespace}') -o=jsonpath='{range .items[*]}{"\n\nDeployment Name: "}{.metadata.name}{"\nNamespace: "}{.metadata.namespace}{"\nNodeSelector: "}{.spec.template.spec.nodeSelector}{"\n"}'
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 ## **NODES**
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ### ALLOCAZIONE RISORSE ###
 alias util='kubectl get nodes --no-headers | awk '\''{print $1}'\'' | xargs -I {} sh -c '\''echo {} ; kubectl describe node {} | grep Allocated -A 5 | grep -ve Event -ve Allocated -ve percent -ve -- ; echo '\'''
@@ -348,8 +349,8 @@ kubectl get nodes -o=custom-columns=NodeName:.metadata.name,TaintKey:.spec.taint
 kubectl taint nodes foo dedicated=special-user:NoSchedule
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 ## **SERVICE**
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ### change type to NodePort ###
 kubectl patch svc prometheus-grafana --type='json' -p '[{"op":"replace","path":"/spec/type","value":"NodePort"}]' -n kube-prometheus-stack
@@ -359,8 +360,8 @@ kubectl patch svc prometheus-grafana --type='json' -p '[{"op": "add", "path":"/s
 kubectl patch service prometheus-kube-prometheus-prometheus -n kube-prometheus-stack -p '{"spec": {"type": "ClusterIP"}}'
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 ## **CRONJOB**
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ### execute jobs immediately ### 
 kubectl get cronjob -n offloading
@@ -395,8 +396,8 @@ kubectl create job hello --image=busybox:1.28 -- echo "Hello World"
 kubectl create cronjob hello --image=busybox:1.28   --schedule="*/1 * * * *" -- echo "Hello World"
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 ## **IMAGES**
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ### list all images for pod ###
 kubectl get pods -o jsonpath='{range .items[*]}{"\n"}{.metadata.name}{":\t"}{range .spec.containers[*]}{.image}{", "}{end}{end}' | sort
@@ -404,8 +405,8 @@ kubectl get pods -o jsonpath='{range .items[*]}{"\n"}{.metadata.name}{":\t"}{ran
 kubectl get pods -o jsonpath="{.items[*].spec.containers[*].image}"
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 ## **DAEMONSET**
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ### Scaling k8s daemonset down to zero ### 
 kubectl -n <namespace> patch daemonset <name-of-daemon-set> -p '{"spec": {"template": {"spec": {"nodeSelector": {"non-existing": "true"}}}}}'
@@ -414,8 +415,8 @@ kubectl -n <namespace> patch daemonset <name-of-daemon-set> -p '{"spec": {"templ
 kubectl -n <namespace> patch daemonset <name-of-daemon-set> --type json -p='[{"op": "remove", "path": "/spec/template/spec/nodeSelector/non-existing"}]'
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 ## **SECRET**
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ### Print secrets in clear base64 ###
 kubectl get secret my-secret -o 'go-template={{index .data "username"}}' | base64 -d
@@ -443,16 +444,17 @@ kubectl get secret my-secret -o go-template='{{range $k,$v := .data}}{{"### "}}{
 kubectl get pods -o json | jq '.items[].spec.containers[].env[]?.valueFrom.secretKeyRef.name' | grep -v null | sort | uniq
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 ## **CONFIGMAP**
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ### extract file from configmap ###
 kubectl get cm <NOME-CONFIGMAP> -o jsonpath='{.data.ballerina\.conf}' > ballerina.conf
 kubectl get cm 3-2-0-wso2apim-gw-worker-conf -o template='{{ index .data "deployment.toml" }}'
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 ## **RBAC**
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 ### Check to see if I can do everything in my current namespace ("*" means all) ###
 kubectl auth can-i '*' '*'
 
@@ -467,22 +469,55 @@ kubectl auth can-i get pods --as=system:serviceaccount:default:default
 kubectl auth can-i --list
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 ## **STORAGECLASS**
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ### set sc as default
 kubectl patch storageclass nfs-client -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}' && kubectl patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 ## **PVC**
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 ### resize PVC ###
 $newsize='{\"spec\":{\"resources\":{\"requests\":{\"storage\":\"<newsize>Gi\"}}}}'
 kubectl patch pvc <name of PVC> --namespace <namespace> --type merge --patch $newsize
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+## **SCC**
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+### get pod scc ###
+
+kubectl get pods -n ping -o go-template --template='{{range .items}}{{"pod: "}}{{.metadata.name}}
+    {{if .spec.securityContext}}
+      PodSecurityContext:
+        {{"runAsGroup: "}}{{.spec.securityContext.runAsGroup}}                               
+        {{"runAsNonRoot: "}}{{.spec.securityContext.runAsNonRoot}}                           
+        {{"runAsUser: "}}{{.spec.securityContext.runAsUser}}                                 {{if .spec.securityContext.seLinuxOptions}}
+        {{"seLinuxOptions: "}}{{.spec.securityContext.seLinuxOptions}}                       {{end}}
+    {{else}}PodSecurity Context is not set
+    {{end}}{{range .spec.containers}}
+    {{"container name: "}}{{.name}}
+    {{"image: "}}{{.image}}{{if .securityContext}}                                      
+        {{"allowPrivilegeEscalation: "}}{{.securityContext.allowPrivilegeEscalation}}   {{if .securityContext.capabilities}}
+        {{"capabilities: "}}{{.securityContext.capabilities}}                           {{end}}
+        {{"privileged: "}}{{.securityContext.privileged}}                               {{if .securityContext.procMount}}
+        {{"procMount: "}}{{.securityContext.procMount}}                                 {{end}}
+        {{"readOnlyRootFilesystem: "}}{{.securityContext.readOnlyRootFilesystem}}       
+        {{"runAsGroup: "}}{{.securityContext.runAsGroup}}                               
+        {{"runAsNonRoot: "}}{{.securityContext.runAsNonRoot}}                           
+        {{"runAsUser: "}}{{.securityContext.runAsUser}}                                 {{if .securityContext.seLinuxOptions}}
+        {{"seLinuxOptions: "}}{{.securityContext.seLinuxOptions}}                       {{end}}{{if .securityContext.windowsOptions}}
+        {{"windowsOptions: "}}{{.securityContext.windowsOptions}}                       {{end}}
+    {{else}}
+        SecurityContext is not set
+    {{end}}
+{{end}}{{end}}'
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ## **DOCKER**
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ### identify log path #####
 kubectl get pod pod-name -ojsonpath='{.status.containerStatuses[0].containerID}'
