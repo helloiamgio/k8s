@@ -246,7 +246,7 @@ kubectl rollout restart deployment -n <NAMESPACE>
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-[[[ NODES ]]]
+## **NODES**
 
 ### ALLOCAZIONE RISORSE ###
 alias util='kubectl get nodes --no-headers | awk '\''{print $1}'\'' | xargs -I {} sh -c '\''echo {} ; kubectl describe node {} | grep Allocated -A 5 | grep -ve Event -ve Allocated -ve percent -ve -- ; echo '\'''
@@ -279,6 +279,17 @@ kubectl get nodes -o=custom-columns=NodeName:.metadata.name,TaintKey:.spec.taint
 
 ### If a taint with that key and effect already exists, its value is replaced as specified. ###
 kubectl taint nodes foo dedicated=special-user:NoSchedule
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## **SERVICE**
+
+### change type to NodePort ###
+kubectl patch svc prometheus-grafana --type='json' -p '[{"op":"replace","path":"/spec/type","value":"NodePort"}]' -n kube-prometheus-stack
+kubectl patch svc prometheus-grafana --type='json' -p '[{"op": "add", "path":"/spec/ports/0/nodePort", "value":33333}]' -n kube-prometheus-stack
+
+### change type to ClusterIP ###
+kubectl patch service prometheus-kube-prometheus-prometheus -n kube-prometheus-stack -p '{"spec": {"type": "ClusterIP"}}'
 
 
 
