@@ -254,6 +254,9 @@ kubectl patch deployment valid-deployment  --type json   -p='[{"op": "remove", "
 ### PATCH Image Policy ###
 kubectl get deployments -o name | sed -e 's/.*\///g' | xargs -I {} kubectl patch deployment {} --type=json -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/imagePullPolicy", "value": "IfNotPresent"}]'
 
+### PATCH ImagePullSecret ###
+kubectl patch deployment my-deployment -p '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"my-secret-pull"}]}}}}'
+
 ### Restart ALL DEPLOY in a namespace ###
 kubectl get deployments -n <NAMESPACE> -o custom-columns=NAME:.metadata.name|grep -iv NAME|while read LINE; do kubectl rollout restart deployment $LINE -n <NameSpace Name> ; done;
 kubectl rollout restart deployment -n <NAMESPACE>
