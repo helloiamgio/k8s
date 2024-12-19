@@ -165,6 +165,44 @@ kubectl get quota --all-namespaces -o=custom-columns=Project:.metadata.namespace
 kubectl get pod pod-name -ojsonpath='{.status.containerStatuses[0].containerID}'
 docker inspect container-id | grep -i logpath
 
+### Immagini docker per size ###
+docker images --format 'table {{.Repository}}\t{{.ID}}\t{{.Tag}}\t{{.Size}}' | (read -r; printf "%s\n" "$REPLY"; sort -h -k7)
+
+### show labels ###
+docker container ls --format "table {{.ID}}\t{{.Labels}}" 
+docker image ls -a --filter "not label=com.docker.ucp.version=3.5.3"
+docker image prune --filter label!=com.docker.dtr.version: 2.9.7
+
+### prune with label ###
+docker image prune --filter label!=com.docker.ucp.version=3.5.3 --filter label!=com.docker.dtr.version:2.9.7
+
+### Running images ###
+runningImages=$(docker ps --format {{.Image}})
+docker images --format "{{.ID}} {{.Repository}}:{{.Tag}}" | grep -v "$runningImages"
+
+### container IP ###
+docker ps --format "{{.Names}}" | while read name; do echo "$name: $(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $name)"; done
+
+### set proxy ###
+mkdir /etc/systemd/system/docker.service.d ; cd /etc/systemd/system/docker.service.d
+
+
+cat <<EOF > http-proxy.conf
+[Service]
+Environment="HTTP_PROXY=http://user01:password@10.10.10.10:8080/"
+Environment="HTTPS_PROXY=https://user01:password@10.10.10.10:8080/"
+Environment="NO_PROXY= hostname.example.com,172.10.10.10"
+EOF
+
+systemctl daemon-reload
+systemctl restart docker
+
+systemctl show docker --property Environment 
+
+
+
+
+
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ## **EVENTS**
@@ -397,7 +435,6 @@ kubectl auth can-i list deployments.extensions
 
 ### Check permission for account ###
 kubectl auth can-i get pods --as=system:serviceaccount:default:default
-
 kubectl auth can-i --list
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -409,5 +446,8 @@ kubectl patch storageclass nfs-client -p '{"metadata": {"annotations":{"storagec
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
+## **PVC**
+### resize PVC ###
+$newsize='{\"spec\":{\"resources\":{\"requests\":{\"storage\":\"<newsize>Gi\"}}}}'
+kubectl patch pvc <name of PVC> --namespace <namespace> --type merge --patch $newsize
 
