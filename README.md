@@ -300,6 +300,59 @@ kubectl get deployments -o name | sed -e 's/.*\///g' | xargs -I {} kubectl patch
 kubectl get deployments -n <NAMESPACE> -o custom-columns=NAME:.metadata.name|grep -iv NAME|while read LINE; do kubectl rollout restart deployment $LINE -n <NameSpace Name> ; done;
 kubectl rollout restart deployment -n <NAMESPACE>
 
+### Per ogni nome di deployment, stampa le immagini dei relativi container ###
+for deployment_name in $deployment_names; do
+    container_names=$(kubectl get deployment $deployment_name -o=jsonpath='{.spec.template.spec.containers[*].name}')
+    for container_name in $container_names; do
+        image=$(kubectl get deployment $deployment_name -o=jsonpath="{.spec.template.spec.containers[?(@.name=='$container_name')].image}")
+        echo "Deployment: $deployment_name - Container: $container_name - Immagine: $image"
+    done
+done
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## **AFFINITY/NODESELECTOR/LABEL*
+
+kubectl run newpod --image image1 --overrides='{ "spec": { "affinity": { "nodeAffinity": { "requiredDuringSchedulingIgnoredDuringExecution": { "nodeSelectorTerms": [{ "matchExpressions": [{ "key": "kubernetes.io/hostname",  "operator": "In", "values": [ "one-worker-node", "second-worker-node" ]} ]} ]} } } } }'
+
+### aggiungere label ai nodi ###
+kubectl label nodes grpi-kb1-kv21 app=invydio
+
+### aggiungere label a tutti i nodi ###
+kubectl label nodes --all -app=invydio
+
+### rimuovere label ###
+kubectl label nodes --all app-
+
+### patch deployment ###
+kubectl patch deployment my-deployment -p '{"spec":{"template":{"spec":{"nodeSelector":{"app":"apphub"}}}}}'
+kubectl patch deployment my-deployment -p '{"spec":{"template":{"spec":{"nodeSelector":{"node-role.kubernetes.io/worker":"true"}}}}}'
+
+### remove ###
+kubectl patch deployment <nome-del-tuo-deployment> --type='json' -p='[{"op": "remove", "path": "/spec/template/spec/nodeSelector/node-role.kubernetes.io~1worker"}]'
+
+### replace ###
+kubectl patch deployment <nome-del-tuo-deployment> --type='json' -p='[{"op": "replace", "path": "/spec/template/spec/nodeSelector", "value": {"app": "apphub"}}]'
+
+### list nodeselector ###
+kubectl get deployment my-deployment -o jsonpath={.spec.template.spec.nodeSelector}
+
+### Funzione per stampare il valore delle label dei pod ###
+stampare_valore_label_pod() {
+    namespace=$(kubectl config view --minify --output 'jsonpath={..namespace}')
+    kubectl get pods --namespace=$namespace -o=jsonpath='{range .items[*]}{"Namespace: "}{.metadata.namespace}{"\nPod Name: "}{.metadata.name}{"\nLabel: "}{.metadata.labels}{"\n\n"}'
+}
+
+### Funzione per eseguire una ricerca con una label specifica ###
+
+read -p "Inserisci la label nel formato label:valore: " label
+label_key=$(echo $label | cut -d ":" -f 1)
+label_value=$(echo $label | cut -d ":" -f 2)
+kubectl get pods --namespace=$(kubectl config view --minify --output 'jsonpath={..namespace}') -l "$label_key"="$label_value" -o wide
+
+### Funzione per visualizzare i nodeselector dei deployment ###
+
+kubectl get deployments --namespace=$(kubectl config view --minify --output 'jsonpath={..namespace}') -o=jsonpath='{range .items[*]}{"\n\nDeployment Name: "}{.metadata.name}{"\nNamespace: "}{.metadata.namespace}{"\nNodeSelector: "}{.spec.template.spec.nodeSelector}{"\n"}'
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
