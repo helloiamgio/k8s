@@ -298,8 +298,9 @@ kubectl get events --sort-by=.metadata.creationTimestamp
 kubectl get events --all-namespaces --field-selector type=Warning
 ```
 
-```
+
 ### events sorted ###
+```
 kubectl get events --sort-by=.metadata.creationTimestamp
 ```
 
