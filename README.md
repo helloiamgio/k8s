@@ -291,5 +291,100 @@ kubectl patch svc prometheus-grafana --type='json' -p '[{"op": "add", "path":"/s
 ### change type to ClusterIP ###
 kubectl patch service prometheus-kube-prometheus-prometheus -n kube-prometheus-stack -p '{"spec": {"type": "ClusterIP"}}'
 
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## **CRONJOB**
+
+### execute jobs immediately ### 
+kubectl get cronjob -n offloading
+kubectl create job --from=cronjob/<cronjob-name> <job-name> -n offloading
+
+kubectl get pods -n offloading
+kubectl delete job <job-name>
+kubectl delete pods/nomepod -n offloading
+
+### patch cronjob schedule ### 
+kubectl patch cronjobs <job-name> -p '{"spec" : {"suspend" : true }}'
+
+### suspend active cronjobs ###
+kubectl get cronjob | grep False | awk '{print $1}' | xargs kubectl patch cronjob -p '{"spec" : {"suspend" : true }}'
+
+### resume suspended cronjobs ###
+kubectl get cronjob | grep True | awk '{print $1}' | xargs kubectl patch cronjob -p '{"spec" : {"suspend" : false }}'
+
+### LOOP ###
+for CJ in $(k get cj -A | grep ocr | awk '{print $2}'); do k patch cj $CJ -p '{"spec" : {"suspend" : true }}'; done
+for CJ in $(k get cj -A | grep ocr | awk '{print $2}'); do k patch cj $CJ -p '{"spec" : {"suspend" : false }}'; done
+
+### recreate cronjob ###  
+for CJ in $(k get cj -A | grep ocr | awk '{print $2}'); do k get cj $CJ -o yaml > $CJ.backup.yaml; done
+for CJ in $(k get cj -A | grep ocr | awk '{print $2}'); do k delete cj $CJ ; done
+for CJ in $(ls -1 *.yaml); do k create -f $CJ.backup.yaml ; done
+
+### create a Job which prints "Hello World" ###
+kubectl create job hello --image=busybox:1.28 -- echo "Hello World"
+
+### create a CronJob that prints "Hello World" every minute ###
+kubectl create cronjob hello --image=busybox:1.28   --schedule="*/1 * * * *" -- echo "Hello World"
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## **IMAGES**
+
+### list all images for pod ###
+kubectl get pods -o jsonpath='{range .items[*]}{"\n"}{.metadata.name}{":\t"}{range .spec.containers[*]}{.image}{", "}{end}{end}' | sort
+
+kubectl get pods -o jsonpath="{.items[*].spec.containers[*].image}"
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## **DAEMONSET**
+
+### Scaling k8s daemonset down to zero ### 
+kubectl -n <namespace> patch daemonset <name-of-daemon-set> -p '{"spec": {"template": {"spec": {"nodeSelector": {"non-existing": "true"}}}}}'
+
+### Scaling up k8s daemonset ### 
+kubectl -n <namespace> patch daemonset <name-of-daemon-set> --type json -p='[{"op": "remove", "path": "/spec/template/spec/nodeSelector/non-existing"}]'
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## **SECRET**
+
+### Print secrets in clear base64 ###
+kubectl get secret my-secret -o 'go-template={{index .data "username"}}' | base64 -d
+kubectl get secret my-secret -o json | jq '.data | map_values(@base64d)'
+
+### update with patch ###
+kubectl patch secret test --type='json' -p='[{"op" : "replace" ,"path" : "/data/username" ,"value" : "dGVzdHVzZXIy"}]'
+
+### Create a secret with several keys ###
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysecret
+type: Opaque
+data:
+  password: $(echo -n "s33msi4" | base64 -w0)
+  username: $(echo -n "jane" | base64 -w0)
+EOF
+
+### Output decoded secrets without external tools ###
+kubectl get secret my-secret -o go-template='{{range $k,$v := .data}}{{"### "}}{{$k}}{{"\n"}}{{$v|base64decode}}{{"\n\n"}}{{end}}'
+
+### List all Secrets currently in use by a pod ###
+kubectl get pods -o json | jq '.items[].spec.containers[].env[]?.valueFrom.secretKeyRef.name' | grep -v null | sort | uniq
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## **CONFIGMAP**
+
+### extract file from configmap ###
+kubectl get cm <NOME-CONFIGMAP> -o jsonpath='{.data.ballerina\.conf}' > ballerina.conf
+kubectl get cm 3-2-0-wso2apim-gw-worker-conf -o template='{{ index .data "deployment.toml" }}'
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 
 
