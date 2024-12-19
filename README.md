@@ -309,8 +309,9 @@ kubectl get events --sort-by=.metadata.creationTimestamp
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ### restart pod graceful ### 
-k get deploy
+```
 k rollout restart deployment ncp-3ds
+```
 
 ### change Deployment Image ###
 ```
