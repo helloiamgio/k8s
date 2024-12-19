@@ -34,23 +34,17 @@ kubectl config unset users.foo                       # delete user foo
 alias kx='f() { [ "$1" ] && kubectl config use-context $1 || kubectl config current-context ; } ; f'
 alias kn='f() { [ "$1" ] && kubectl config set-context --current --namespace $1 || kubectl config view --minify | grep namespace | cut -d" " -f6 ; } ; f'
 
-### switch namespace senza kubens ###
+# switch namespace senza kubens
 kubectl config set-context $(kubectl config current-context) --namespace=<namespace>
 kubectl config view | grep namespace
 kubectl get pods
 
-##### list alla namespace resources ####
+# list alla namespace resources
 kubectl api-resources --verbs=list --namespaced -o name   | xargs -n 1 kubectl get --show-kind --ignore-not-found -n tibco-prod
 
-##### events sorted ##### 
+# events sorted
 kubectl get events --sort-by=.metadata.creationTimestamp
 
-##### get quotas for all namespace ##### 
+# get quotas for all namespace
 kubectl get quota --all-namespaces -o=custom-columns=Project:.metadata.namespace,TotalPods:.status.used.pods,TotalCPURequest:.status.used.requests'\.'cpu,TotalCPULimits:.status.used.limits'\.'cpu,TotalMemoryRequest:.status.used.requests'\.'memory,TotalMemoryLimit:.status.used.limits'\.'memory
 
-
-
-[[[ DOCKER ]]]
-##### identify log path #####
-kubectl get pod pod-name -ojsonpath='{.status.containerStatuses[0].containerID}'
-docker inspect container-id | grep -i logpath
