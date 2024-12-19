@@ -243,3 +243,42 @@ kubectl get deployments -o name | sed -e 's/.*\///g' | xargs -I {} kubectl patch
 kubectl get deployments -n <NAMESPACE> -o custom-columns=NAME:.metadata.name|grep -iv NAME|while read LINE; do kubectl rollout restart deployment $LINE -n <NameSpace Name> ; done;
 kubectl rollout restart deployment -n <NAMESPACE>
 
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+[[[ NODES ]]]
+
+### ALLOCAZIONE RISORSE ###
+alias util='kubectl get nodes --no-headers | awk '\''{print $1}'\'' | xargs -I {} sh -c '\''echo {} ; kubectl describe node {} | grep Allocated -A 5 | grep -ve Event -ve Allocated -ve percent -ve -- ; echo '\'''
+util
+
+### label node ### 
+kubectl node <node-name> kubernets.io/role=<name-your-node-role> ##### --overwrite ##### 
+es. kubectl label node worker1  node-role.kubernetes.io/worker=worker
+
+### patch node selector ### 
+kubectl patch deployments nginx-deployment -p '{"spec": {"template": {"spec": {"nodeSelector": {"kubernetes.io/hostname": "node-2"}}}}}'
+
+### check Taints ###
+kubectl get nodes <NODE> -o json | jq -r '.spec.taints | .[]'
+
+### get node info columns ###
+kubectl get nodes -o custom-columns="Name:.metadata.name,InternalIP:.status.addresses[0].address"
+kubectl get nodes -o custom-columns="Name:.metadata.name,InternalIP:.status.addresses[0].address,Kernel:.status.nodeInfo.kernelVersion,MemoryPressure:.status.conditions[0].status,DiskPressure:.status.conditions[1].status,PIDPressure:.status.conditions[2].status,Ready:.status.conditions[3].status"
+
+kubectl cordon my-node                                                # Mark my-node as unschedulable
+kubectl drain my-node                                                 # Drain my-node in preparation for maintenance
+kubectl uncordon my-node                                              # Mark my-node as schedulable
+kubectl top node my-node                                              # Show metrics for a given node
+kubectl cluster-info                                                  # Display addresses of the master and services
+kubectl cluster-info dump                                             # Dump current cluster state to stdout
+kubectl cluster-info dump --output-directory=/path/to/cluster-state   # Dump current cluster state to /path/to/cluster-state
+
+### View existing taints on which exist on current nodes. ###
+kubectl get nodes -o=custom-columns=NodeName:.metadata.name,TaintKey:.spec.taints[*].key,TaintValue:.spec.taints[*].value,TaintEffect:.spec.taints[*].effect
+
+### If a taint with that key and effect already exists, its value is replaced as specified. ###
+kubectl taint nodes foo dedicated=special-user:NoSchedule
+
+
+
