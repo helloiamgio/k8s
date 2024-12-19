@@ -349,8 +349,9 @@ cat all_deployment.txt | grep -v "0/0" | grep -v NAME | grep -v istio-system | g
 ```
 
 ### Retrieve Original Replicas ###
-replica_spec=$(kubectl get deployment/applicatiom -o jsonpath='{.spec.replicas}')
 ```
+replica_spec=$(kubectl get deployment/applicatiom -o jsonpath='{.spec.replicas}')
+
 kubectl scale --replicas=0 deployment application
 kubectl scale --replicas=$replica_spec deployment application
 ```
