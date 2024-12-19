@@ -10,14 +10,14 @@ kubectl get pods -o wide --all-namespaces | awk '{print $8}' | sort | uniq -c
 ### max pod x nodo ### 
 kubectl get node <node_name> -ojsonpath='{.status.capacity.pods}{"\n"}'
 
-##### aprire shell in un pod ##### 
+### aprire shell in un pod ### 
 kubectl exec -it --namespace=<NAMESPACE> <pod> -- bash (-c "mongo")
 
-##### describe pod with particular label
+### describe pod with particular label ###
 pod=$(kubectl get pods --selector="name=frontend" --output=jsonpath={.items..metadata.name})
 kubectl describe pod $pod
 
-##### list only name ##### 
+### list only name ### 
 kubectl get pods --no-headers -o custom-columns=":metadata.name"
 kubectl get deploy --no-headers -o custom-columns=":metadata.name"
 
@@ -35,47 +35,45 @@ kubectl get pod --field-selector status.phase!=Running -o=custom-columns=NAME:.m
 kubectl get pods -o=jsonpath='{range .items[*]}{"\n"}{.metadata.name}{":\t"}{range .status.containerStatuses[*]}{.name}{": "}{.ready}{", "}{end}{end}'
 kubectl get pod --all-namespaces | awk '{print $3}' | awk -F/ '{s+=$1} END {print s}' ### count
 
-##### get pods x nodes ##### 
+### get pods x nodes ### 
 kubectl get pods --all-namespaces -o wide --field-selector spec.nodeName=
 
-##### get pod using column #####
+### get pod using column ###
 kubectl get pods --all-namespaces -o=custom-columns=NAME:.metadata.name,Namespace:.metadata.namespace
 
-##### list pod sort by name #####
+### list pod sort by name ###
 kubectl get po -o wide --sort-by=.spec.nodeName
 
-##### which Pod is using which PVC ########
+### which Pod is using which PVC ###
 kubectl get po -o json --all-namespaces | jq -j '.items[] | "\(.metadata.namespace), \(.metadata.name), \(.spec.volumes[].persistentVolumeClaim.claimName)\n"' | grep -v null
 
-##### Pod termination message ######
+### Pod termination message ###
 kubectl get pod termination-demo -o go-template="{{range .status.containerStatuses}}{{.lastState.terminated.message}}{{end}}"
 
-##### delete evicted pods ##### 
+### delete evicted pods ### 
 for POD in $(kubectl get pods|grep Evicted|awk '{print $1}'); do kubectl delete pods $POD ; done
 kubectl get po -A --all-namespaces -o json | jq  '.items[] | select(.status.reason!=null) | select(.status.reason | contains("Evicted")) | "kubectl delete po \(.metadata.name) -n \(.metadata.namespace)"' | xargs -n 1 bash -c
 
-
-##### delete ALL Terminating pods ##### 
+### delete ALL Terminating pods ### 
 kubectl get pods --all-namespaces | awk '$4=="Terminating" {print "kubectl delete pod --force --grace-period=0 --namespace="$1" "$2}'
 
-##### logs tail ##### 
+### logs tail ### 
 k logs -f NOMEPOD --tail=10
 
-##### logs degli ultimi x minuti ##### 
+### logs degli ultimi x minuti ### 
 k logs -f NOMEPOD --since=30m
 
-##### check reason for evicted pods ##### 
+### check reason for evicted pods ### 
 kubectl get pod -A -o json | jq '.items##### #####  | select(.status.reason=="Evicted") | {NAME:.metadata.name, NAMESPACE:.metadata.namespace, REASON:.status.reason, MESSAGE:.status.message}'
 
-# Produce ENV for all pods, assuming you have a default container for the pods, default namespace and the `env` command is supported.
-# Helpful when running any supported command across all pods, not just `env`
+### Produce ENV for all pods, assuming you have a default container for the pods, default namespace and the `env` command is supported. Helpful when running any supported command across all pods, not just `env` ###
 for pod in $(kubectl get po --output=jsonpath={.items..metadata.name}); do echo $pod && kubectl exec -it $pod -- env; done
 
-##### Patch Image for a container #####
+### Patch Image for a container ###
 kubectl get pod/nginx -n default -o=custom-columns='IMAGE:spec.containers[*].image'
 kubectl patch pod nginx -p '{"spec":{"containers":[{"name": "nginx","image": "nginx:1.9.6"}]}}'
 
-##### List pod with container images + node // Custom Column ####
+### List pod with container images + node // Custom Column ###
 kubectl get pod -o custom-columns="POD-NAME":.metadata.name,"NAMESPACE":.metadata.namespace,"CONTAINER-IMAGES":.spec.containers[*].image
 #oc get pod -o custom-columns="POD-NAME":.metadata.name,"NAMESPACE":.metadata.namespace,"NODE":.spec.nodeName
 
