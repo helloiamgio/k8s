@@ -658,7 +658,6 @@ kubectl patch secret test --type='json' -p='[{"op" : "replace" ,"path" : "/data/
 ### Create a secret with several keys ###
 ```
 cat <<EOF | kubectl apply -f -
-```
 apiVersion: v1
 kind: Secret
 metadata:
@@ -668,6 +667,7 @@ data:
   password: $(echo -n "s33msi4" | base64 -w0)
   username: $(echo -n "jane" | base64 -w0)
 EOF
+```
 
 ### Output decoded secrets without external tools ###
 ```
