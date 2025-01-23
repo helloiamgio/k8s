@@ -170,6 +170,8 @@ kubectl patch pod nginx -p '{"spec":{"containers":[{"name": "nginx","image": "ng
 ```
 kubectl patch pod myapp --patch '{"spec": {"containers": [{"name": "myapp-container", "resources": {"requests": {"cpu": "400m"}, "limits": {"cpu": "800m"}}}]}}'
 kubectl patch pod myapp --patch '{"spec": {"containers": [{"name": "myapp-container", "resources": {"requests": {"memory": "1Gi"}}}]}}'
+
+oc patch pod resizeme -p ' {"spec": {"containers": [{"name": "resizeme", "resources": { "requests" :{ "cpu" : 2, "memory": "512Mi"}, "limits" :{ "cpu" : 2, "memory" : "1Gi" } } }] }}'
 ```
 
 
