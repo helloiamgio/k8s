@@ -166,6 +166,13 @@ kubectl get pod/nginx -n default -o=custom-columns='IMAGE:spec.containers[*].ima
 kubectl patch pod nginx -p '{"spec":{"containers":[{"name": "nginx","image": "nginx:1.9.6"}]}}'
 ```
 
+### Update Resource for a container ###
+```
+kubectl patch pod myapp --patch '{"spec": {"containers": [{"name": "myapp-container", "resources": {"requests": {"cpu": "400m"}, "limits": {"cpu": "800m"}}}]}}'
+kubectl patch pod myapp --patch '{"spec": {"containers": [{"name": "myapp-container", "resources": {"requests": {"memory": "1Gi"}}}]}}'
+```
+
+
 ### List pod with container images + node // Custom Column ###
 ```
 kubectl get pod -o custom-columns="POD-NAME":.metadata.name,"NAMESPACE":.metadata.namespace,"CONTAINER-IMAGES":.spec.containers[*].image
