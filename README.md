@@ -76,28 +76,28 @@ kubectl get pods --sort-by=.metadata.creationTimestamp
 ### list non running pod ###
 ```
 kubectl get pods -A --field-selector=status.phase!=Running | grep -v Complete
-kubectl get pod --field-selector status.phase!=Running -o=custom-columns=NAME:.metadata.name,STATUS:.status.phase,NAMEDPACE:.metadata.namespace
+kubectl get pod --field-selector status.phase!=Running -o=custom-columns=NAME:.metadata.name,STATUS:.status.phase,NAMEDPACE:.metadata.
 ```
 
 ### list all container in a cluster ###
 ```
 kubectl get pods -o=jsonpath='{range .items[*]}{"\n"}{.metadata.name}{":\t"}{range .status.containerStatuses[*]}{.name}{": "}{.ready}{", "}{end}{end}'
-kubectl get pod --all-namespaces | awk '{print $3}' | awk -F/ '{s+=$1} END {print s}' ### count
+kubectl get pod --all-s | awk '{print $3}' | awk -F/ '{s+=$1} END {print s}' ### count
 ```
 
 ### get pods x nodes ### 
 ```
-kubectl get pods --all-namespaces -o wide --field-selector spec.nodeName=
+kubectl get pods --all-s -o wide --field-selector spec.nodeName=
 ```
 
-### get pods x namespace ### 
+### get pods x  ### 
 ```
-kubectl get pods --all-namespaces --no-headers -o custom-columns="Namespace:.metadata.namespace" | sort | uniq -c | awk '{print "Namespace: "$2, "Pods: "$1}'
+kubectl get pods --all-s --no-headers -o custom-columns=":.metadata." | sort | uniq -c | awk '{print ": "$2, "Pods: "$1}'
 ```
 
 ### get pod using column ###
 ```
-kubectl get pods --all-namespaces -o=custom-columns=NAME:.metadata.name,Namespace:.metadata.namespace
+kubectl get pods --all-s -o=custom-columns=NAME:.metadata.name,:.metadata.
 ```
 
 ### list pod sort by name ###
@@ -107,7 +107,7 @@ kubectl get po -o wide --sort-by=.spec.nodeName
 
 ### which Pod is using which PVC ###
 ```
-kubectl get po -o json --all-namespaces | jq -j '.items[] | "\(.metadata.namespace), \(.metadata.name), \(.spec.volumes[].persistentVolumeClaim.claimName)\n"' | grep -v null
+kubectl get po -o json --all-s | jq -j '.items[] | "\(.metadata.), \(.metadata.name), \(.spec.volumes[].persistentVolumeClaim.claimName)\n"' | grep -v null
 ```
 
 ### Pod termination message ###
@@ -117,27 +117,32 @@ kubectl get pod termination-demo -o go-template="{{range .status.containerStatus
 
 ### Delete Completed pods ### 
 ```
-$ oc delete pod --field-selector=status.phase==Succeeded --all-namespaces
-$ oc get pods --all-namespaces |  awk '{if ($4 == "Completed") system ("oc delete pod " $2 " -n " $1 )}'
+$ kubectl delete pod --field-selector=status.phase==Succeeded --all-s
+$ kubectl get pods --all-s |  awk '{if ($4 == "Completed") system ("oc delete pod " $2 " -n " $1 )}'
+```
+
+### List Non Running pods ### 
+```
+kubectl get po -A --sort-by=.metadata.creationTimestamp | grep -vE 'Completed|Running'
 ```
 
 ### Additional methods to remove Failed, Pending, Evicted, and all 'Non-Running' pods: ###
 ```
-$ oc delete pod --field-selector=status.phase==Failed --all-namespaces
-$ oc delete pod --field-selector=status.phase==Pending --all-namespaces
-$ oc delete pod --field-selector=status.phase==Evicted --all-namespaces
-$ oc get pods --all-namespaces |  awk '{if ($4 != "Running") system ("oc delete pod " $2 " -n " $1 )}'
+$ oc delete pod --field-selector=status.phase==Failed --all-s
+$ oc delete pod --field-selector=status.phase==Pending --all-s
+$ oc delete pod --field-selector=status.phase==Evicted --all-s
+$ oc get pods --all-s |  awk '{if ($4 != "Running") system ("oc delete pod " $2 " -n " $1 )}'
 ```
 
 ### Delete Evicted pods ### 
 ```
 for POD in $(kubectl get pods|grep Evicted|awk '{print $1}'); do kubectl delete pods $POD ; done
-kubectl get po -A --all-namespaces -o json | jq  '.items[] | select(.status.reason!=null) | select(.status.reason | contains("Evicted")) | "kubectl delete po \(.metadata.name) -n \(.metadata.namespace)"' | xargs -n 1 bash -c
+kubectl get po -A --all-s -o json | jq  '.items[] | select(.status.reason!=null) | select(.status.reason | contains("Evicted")) | "kubectl delete po \(.metadata.name) -n \(.metadata.)"' | xargs -n 1 bash -c
 ```
 
 ### Delete ALL Terminating pods ### 
 ```
-kubectl get pods --all-namespaces | awk '$4=="Terminating" {print "kubectl delete pod --force --grace-period=0 --namespace="$1" "$2}'
+kubectl get pods --all-s | awk '$4=="Terminating" {print "kubectl delete pod --force --grace-period=0 --="$1" "$2}'
 ```
 
 ### logs tail ### 
@@ -152,10 +157,10 @@ k logs -f NOMEPOD --since=30m
 
 ### Check reason for evicted pods ### 
 ```
-kubectl get pod -A -o json | jq '.items##### #####  | select(.status.reason=="Evicted") | {NAME:.metadata.name, NAMESPACE:.metadata.namespace, REASON:.status.reason, MESSAGE:.status.message}'
+kubectl get pod -A -o json | jq '.items##### #####  | select(.status.reason=="Evicted") | {NAME:.metadata.name, :.metadata., REASON:.status.reason, MESSAGE:.status.message}'
 ```
 
-### Produce ENV for all pods, assuming you have a default container for the pods, default namespace and the `env` command is supported. Helpful when running any supported command across all pods, not just `env` ###
+### Produce ENV for all pods, assuming you have a default container for the pods, default  and the `env` command is supported. Helpful when running any supported command across all pods, not just `env` ###
 ```
 for pod in $(kubectl get po --output=jsonpath={.items..metadata.name}); do echo $pod && kubectl exec -it $pod -- env; done
 ```
@@ -177,8 +182,8 @@ oc patch pod resizeme -p ' {"spec": {"containers": [{"name": "resizeme", "resour
 
 ### List pod with container images + node // Custom Column ###
 ```
-kubectl get pod -o custom-columns="POD-NAME":.metadata.name,"NAMESPACE":.metadata.namespace,"CONTAINER-IMAGES":.spec.containers[*].image
-#oc get pod -o custom-columns="POD-NAME":.metadata.name,"NAMESPACE":.metadata.namespace,"NODE":.spec.nodeName
+kubectl get pod -o custom-columns="POD-NAME":.metadata.name,"":.metadata.,"CONTAINER-IMAGES":.spec.containers[*].image
+#oc get pod -o custom-columns="POD-NAME":.metadata.name,"":.metadata.,"NODE":.spec.nodeName
 ```
 
 ### INTERACT with POD ###
@@ -194,7 +199,7 @@ kubectl logs -f my-pod
 kubectl logs -f my-pod -c my-container              
 kubectl logs -f -l name=myLabel --all-containers    
 kubectl run -i --tty busybox --image=busybox:1.28 -- sh
-kubectl run nginx --image=nginx -n mynamespace
+kubectl run nginx --image=nginx -n my
 kubectl run nginx --image=nginx --dry-run=client -o yaml > pod.yaml
 ```
 
@@ -212,7 +217,7 @@ kubectl top pod POD_NAME --sort-by=memory
 ```
 kubectl cp /tmp/foo_dir my-pod:/tmp/bar_dir
 kubectl cp /tmp/foo my-pod:/tmp/bar -c my-container
-kubectl cp /tmp/foo my-namespace/my-pod:/tmp/bar
+kubectl cp /tmp/foo my-/my-pod:/tmp/bar
 kubectl cp my-namespace/my-pod:/tmp/foo /tmp/bar
 ```
 
@@ -288,6 +293,7 @@ kubectl get pods
 ### list alla namespace resources ###
 ```
 kubectl api-resources --verbs=list --namespaced -o name   | xargs -n 1 kubectl get --show-kind --ignore-not-found -n tibco-prod
+kubectl api-resources --verbs=list --namespaced=true | awk '{ print $1 }' | xargs -n 1 kubectl get -n default
 ```
 
 ### get quotas for all namespace ###
