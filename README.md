@@ -652,6 +652,7 @@ kubectl get pods -o jsonpath="{.items[*].spec.containers[*].image}"
 ### set ingress class ###
 ```
 kubectl annotate ingress pacman-ingress -n pacman kubernetes.io/ingress.class="nginx-default" --overwrite
+kubectl annotate ingress pacman-ingress -n pacman nginx.ingress.kubernetes.io/rewrite-target=/
 ```
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
