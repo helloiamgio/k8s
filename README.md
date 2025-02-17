@@ -32,8 +32,7 @@ echo "source <(kubectl completion bash | sed 's|__start_kubectl kubectl|__start_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ### pod request/limits ###
 ```
-kubectl get $i -o=jsonpath='{range .spec.containers[*]}{"Container Name: "}{.name}{"\n"}{"Requests:"}{.resources.requests}{"\n"}{"Limits:"}{.resources.limits}{"\n"}{end}' -n <NAMESPACE>
-kubectl get pods --all-namespaces -o jsonpath='{range .items[*]}{.metadata.name}{":\t"}{.spec.containers[0].resources.limits}{"\n"}{end}' 
+kubectl get pods -o jsonpath='{range .items[*]}{.metadata.name}{":\t"}{"REQUESTS: "}{.spec.containers[0].resources.requests}{":\t"}{"LIMITS: "}{.spec.containers[0].resources.limits}{"\n"}{end}'
 ```
 
 ### pod x nodo ###
