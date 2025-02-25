@@ -676,6 +676,7 @@ kubectl -n <namespace> patch daemonset <name-of-daemon-set> --type json -p='[{"o
 ```
 kubectl get secret my-secret -o 'go-template={{index .data "username"}}' | base64 -d
 kubectl get secret my-secret -o json | jq '.data | map_values(@base64d)'
+kubectl get secret my-secret -n my-namespace -o json | jq -r '.data | to_entries[] | "\(.key): \(.value | @base64d)"'
 ```
 
 ### update with patch ###
