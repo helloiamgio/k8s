@@ -77,6 +77,11 @@ kubectl get pods --sort-by=.metadata.creationTimestamp
 kubectl get pods -A --field-selector=status.phase!=Running | grep -v Complete
 kubectl get pod --field-selector status.phase!=Running -o=custom-columns=NAME:.metadata.name,STATUS:.status.phase,NAMEDPACE:.metadata.
 ```
+### list all container in a pod/namespace ###
+```
+kubectl get pods -o custom-columns="NAMESPACE:.metadata.namespace,POD:.metadata.name,CONTAINER:.spec.containers[*].name"
+kubectl get pods --all-namespaces -o custom-columns="NAMESPACE:.metadata.namespace,POD:.metadata.name,CONTAINER:.spec.containers[*].name"
+```
 
 ### list all container in a cluster ###
 ```
@@ -309,6 +314,7 @@ kubectl get quota --all-namespaces -o=custom-columns=Project:.metadata.namespace
 ### get event sort by creation ###
 ```
 kubectl get events --sort-by=.metadata.creationTimestamp
+kubectl get events --sort-by='.lastTimestamp' |
 ```
 
 ### get event filtered by type ###
