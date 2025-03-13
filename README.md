@@ -808,6 +808,29 @@ kubectl get pods -n ping -o go-template --template='{{range .items}}{{"pod: "}}{
 ```
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+## **CAPACITY**
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+```
+### capacity node ###
+kube-capacity -u -o json | jq -r '
+  [.nodes[] | {name, cpu_requests: .cpu.requests, cpu_limits: .cpu.limits, cpu_util: .cpu.utilization, memory_requests: .memory.requests, memory_limits: .memory.limits, memory_util: .memory.utilization}] |
+  (["NODE", "CPU REQUESTS", "CPU LIMITS", "CPU UTIL", "MEMORY REQUESTS", "MEMORY LIMITS", "MEMORY UTIL"]),
+  (.[] | [.name, .cpu_requests, .cpu_limits, .cpu_util, .memory_requests, .memory_limits, .memory_util])
+  | @csv
+' > "$(oc cluster-info | grep 'Kubernetes control plane' | awk -F'/' '{print $3}' | awk -F':' '{print $1}')-node-capacity.csv"
+
+### capacity pod ###
+kube-capacity -u -p -o json | jq -r '
+  (["NODE", "NAMESPACE", "POD", "CPU REQUESTS", "CPU REQUESTS %", "CPU LIMITS", "CPU LIMITS %", "CPU UTIL", "CPU UTIL %", "MEMORY REQUESTS", "MEMORY REQUESTS %", "MEMORY LIMITS", "MEMORY LIMITS %", "MEMORY UTIL", "MEMORY UTIL %"]),
+  (.nodes[] | 
+  . as $node |
+  .pods[] | 
+  [$node.name, .namespace, .name, .cpu.requests, .cpu.requestsPercent, .cpu.limits, .cpu.limitsPercent, .cpu.utilization, .cpu.utilizationPercent, .memory.requests, .memory.requestsPercent, .memory.limits, .memory.limitsPercent, .memory.utilization, .memory.utilizationPercent]) | 
+  @csv' > "$(oc cluster-info | grep 'Kubernetes control plane' | awk -F'/' '{print $3}' | awk -F':' '{print $1}')-pod-capacity.csv"
+```
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ## **DOCKER**
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
