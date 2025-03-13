@@ -819,7 +819,8 @@ kube-capacity -u -o json | jq -r '
   (.[] | [.name, .cpu_requests, .cpu_limits, .cpu_util, .memory_requests, .memory_limits, .memory_util])
   | @csv
 ' > "$(oc cluster-info | grep 'Kubernetes control plane' | awk -F'/' '{print $3}' | awk -F':' '{print $1}')-node-capacity.csv"
-
+```
+```
 ### capacity pod ###
 kube-capacity -u -p -o json | jq -r '
   (["NODE", "NAMESPACE", "POD", "CPU REQUESTS", "CPU REQUESTS %", "CPU LIMITS", "CPU LIMITS %", "CPU UTIL", "CPU UTIL %", "MEMORY REQUESTS", "MEMORY REQUESTS %", "MEMORY LIMITS", "MEMORY LIMITS %", "MEMORY UTIL", "MEMORY UTIL %"]),
