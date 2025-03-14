@@ -115,6 +115,11 @@ kubectl get pods --all-namespaces -o=json | jq -c '.items[] | {name: .metadata.n
 kubectl get pods --all-namespaces -o custom-columns='POD_NAME:.metadata.name,NAMESPACE:.metadata.namespace,CLAIM_NAME:.spec.volumes[*].persistentVolumeClaim.claimName' | grep -v '<none>'
 ```
 
+### NFS server for PV ###
+```
+kubectl get pv -o custom-columns='NAME:.metadata.name,SERVER:.spec.nfs.server' | sort | uniq
+```
+
 ### Pod termination message ###
 ```
 kubectl get pod termination-demo -o go-template="{{range .status.containerStatuses}}{{.lastState.terminated.message}}{{end}}"
