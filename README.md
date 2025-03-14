@@ -111,8 +111,8 @@ kubectl get po -o wide --sort-by=.spec.nodeName
 
 ### which Pod is using which PVC ###
 ```
-kubectl get pods -o json | jq '.items[] | select(.spec.volumes != null) | .metadata.name'
 kubectl get pods --all-namespaces -o=json | jq -c '.items[] | {name: .metadata.name, namespace: .metadata.namespace, claimName: .spec | select(has("volumes")).volumes[] | select(has("persistentVolumeClaim")).persistentVolumeClaim.claimName} | select(.claimName != null)'
+kubectl get pods --all-namespaces -o custom-columns='POD_NAME:.metadata.name,NAMESPACE:.metadata.namespace,CLAIM_NAME:.spec.volumes[*].persistentVolumeClaim.claimName' | grep -v '<none>'
 ```
 
 ### Pod termination message ###
