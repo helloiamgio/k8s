@@ -118,7 +118,7 @@ kubectl get pods --all-namespaces -o custom-columns='POD_NAME:.metadata.name,NAM
 ### NFS server and path for PV ###
 ```
 kubectl get pv -o custom-columns='NAME:.metadata.name,SERVER:.spec.nfs.server' | sort | uniq
-(echo "PV_NAME,NFS_SERVER,PATH"; kubectl get pv -o=json | jq -r '.items[] | select(.spec.nfs != null) | [.metadata.name, .spec.nfs.server, .spec.nfs.path] | @csv' | column -t -s,) | column -t -s,
+kubectl get pv -o custom-columns='PV_NAME:.metadata.name,NFS_SERVER:.spec.nfs.server,PATH:.spec.nfs.path'
 ```
 
 ### Pod termination message ###
