@@ -452,6 +452,27 @@ for deployment_name in $deployment_names; do
 done
 ```
 
+### Which deployment use PVC + replicas
+```
+echo -e "DEPLOYMENT\tNAMESPACE\tPVC_NAME\tREPLICAS"
+kubectl get deploy --all-namespaces -o json | jq -r '
+  .items[] |
+  {
+    name: .metadata.name,
+    namespace: .metadata.namespace,
+    replicas: (.spec.replicas // 1),
+    pvc_names: (
+      .spec.template.spec.volumes[]?
+      | select(.persistentVolumeClaim != null)
+      | .persistentVolumeClaim.claimName
+    )
+  } |
+  select(.pvc_names != null) |
+  "\(.name)\t\(.namespace)\t\(.pvc_names)\t\(.replicas)"
+'
+```
+
+
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ## **AFFINITY / NODESELECTOR / LABEL**
