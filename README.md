@@ -128,8 +128,8 @@ kubectl get pod termination-demo -o go-template="{{range .status.containerStatus
 
 ### Delete Completed pods ### 
 ```
-$ kubectl delete pod --field-selector=status.phase==Succeeded --all-s
-$ kubectl get pods --all-s |  awk '{if ($4 == "Completed") system ("oc delete pod " $2 " -n " $1 )}'
+$ kubectl delete pod --field-selector=status.phase==Succeeded --all-namespaces
+$ kubectl get pods --all-namespaces |  awk '{if ($4 == "Completed") system ("oc delete pod " $2 " -n " $1 )}'
 ```
 
 ### List Non Running pods ### 
@@ -139,21 +139,21 @@ kubectl get po -A --sort-by=.metadata.creationTimestamp | grep -vE 'Completed|Ru
 
 ### Additional methods to remove Failed, Pending, Evicted, and all 'Non-Running' pods: ###
 ```
-$ oc delete pod --field-selector=status.phase==Failed --all-s
-$ oc delete pod --field-selector=status.phase==Pending --all-s
-$ oc delete pod --field-selector=status.phase==Evicted --all-s
-$ oc get pods --all-s |  awk '{if ($4 != "Running") system ("oc delete pod " $2 " -n " $1 )}'
+$ oc delete pod --field-selector=status.phase==Failed --all-namespaces
+$ oc delete pod --field-selector=status.phase==Pending --all-namespaces
+$ oc delete pod --field-selector=status.phase==Evicted --all-namespaces
+$ oc get pods --all-namespaces |  awk '{if ($4 != "Running") system ("oc delete pod " $2 " -n " $1 )}'
 ```
 
 ### Delete Evicted pods ### 
 ```
 for POD in $(kubectl get pods|grep Evicted|awk '{print $1}'); do kubectl delete pods $POD ; done
-kubectl get po -A --all-s -o json | jq  '.items[] | select(.status.reason!=null) | select(.status.reason | contains("Evicted")) | "kubectl delete po \(.metadata.name) -n \(.metadata.)"' | xargs -n 1 bash -c
+kubectl get po -A --all-namespaces -o json | jq  '.items[] | select(.status.reason!=null) | select(.status.reason | contains("Evicted")) | "kubectl delete po \(.metadata.name) -n \(.metadata.)"' | xargs -n 1 bash -c
 ```
 
 ### Delete ALL Terminating pods ### 
 ```
-kubectl get pods --all-s | awk '$4=="Terminating" {print "kubectl delete pod --force --grace-period=0 --="$1" "$2}'
+kubectl get pods --all-namespaces | awk '$4=="Terminating" {print "kubectl delete pod --force --grace-period=0 --="$1" "$2}'
 ```
 
 ### logs tail ### 
