@@ -472,7 +472,6 @@ kubectl get deploy --all-namespaces -o json | jq -r '
 '
 ```
 
-
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ## **AFFINITY / NODESELECTOR / LABEL**
@@ -858,6 +857,12 @@ kube-capacity -u -p -o json | jq -r '
   [$node.name, .namespace, .name, .cpu.requests, .cpu.requestsPercent, .cpu.limits, .cpu.limitsPercent, .cpu.utilization, .cpu.utilizationPercent, .memory.requests, .memory.requestsPercent, .memory.limits, .memory.limitsPercent, .memory.utilization, .memory.utilizationPercent]) | 
   @csv' > "$(oc cluster-info | grep 'Kubernetes control plane' | awk -F'/' '{print $3}' | awk -F':' '{print $1}')-pod-capacity.csv"
 ```
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+## **PROBE**
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+![Alt text](https://github.com/helloiamgio/k8s/blob/main/probe.jpg)
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ## **DOCKER**
