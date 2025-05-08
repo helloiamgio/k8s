@@ -121,9 +121,10 @@ kubectl get pv -o custom-columns='NAME:.metadata.name,SERVER:.spec.nfs.server' |
 kubectl get pv -o custom-columns='PV_NAME:.metadata.name,NFS_SERVER:.spec.nfs.server,PATH:.spec.nfs.path'
 ```
 
-### Pod termination message ###
+### Pod termination status & message ###
 ```
-kubectl get pod termination-demo -o go-template="{{range .status.containerStatuses}}{{.lastState.terminated.message}}{{end}}"
+kubectl get pod PODNAME -o jsonpath='{range .status.containerStatuses[*]}{"Container: "}{.name}{"\n  State: "}{.state.waiting.reason}{"\n  Last State: "}{.lastState.terminated.reason}{"\n\n"}{end}'
+kubectl get pod PODNAME -o go-template="{{range .status.containerStatuses}}{{.lastState.terminated.message}}{{end}}"
 ```
 
 ### Delete Completed pods ### 
