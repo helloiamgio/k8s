@@ -314,6 +314,12 @@ kubectl api-resources --verbs=list --namespaced=true | awk '{ print $1 }' | xarg
 kubectl get quota --all-namespaces -o=custom-columns=Project:.metadata.namespace,TotalPods:.status.used.pods,TotalCPURequest:.status.used.requests'\.'cpu,TotalCPULimits:.status.used.limits'\.'cpu,TotalMemoryRequest:.status.used.requests'\.'memory,TotalMemoryLimit:.status.used.limits'\.'memory
 ```
 
+### list namespace labels ###
+
+```
+kubectl get ns -L kubernetes.io/metadata.name
+```
+
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ## **EVENTS**
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
