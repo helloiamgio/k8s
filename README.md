@@ -554,6 +554,63 @@ kubectl get deployments --namespace=$(kubectl config view --minify --output 'jso
 ## **NODES**
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+### OVERVIEW RISORSE NODI ###
+```
+(
+  # header
+  echo -e "NAME\tROLE\tCPU_CAPACITY\tCPU_ALLOCATABLE\tCPU_USED\tMEM_CAPACITY\tMEM_ALLOCATABLE\tMEM_USED"
+
+  # salva top nodes in array associativi, rimuovendo suffissi e percentuali
+  declare -A cpu_used mem_used
+  while read -r name cpu mem; do
+    cpu_used[$name]="${cpu%m}m"      # aggiunge 'm' solo se non c'è
+    mem_used[$name]="${mem%Mi}Mi"    # aggiunge 'Mi' solo se non c'è
+  done < <(kubectl top nodes --no-headers | awk '{print $1, $2, $3}')
+
+  # stampa tutti i nodi con Capacity/Allocatable + Used
+  kubectl get nodes -o json | jq -r '
+  .items[] |
+  [
+    .metadata.name,
+    (
+      .metadata.labels
+      | to_entries
+      | map(select(.key | startswith("node-role.kubernetes.io/")))
+      | map(.key | sub("node-role.kubernetes.io/"; ""))
+      | join(",")
+    ),
+    .status.capacity.cpu,
+    .status.allocatable.cpu,
+    (
+      .status.capacity.memory
+      | capture("(?<num>[0-9]+)(?<unit>[KMG]i)?")
+      | .num as $n | .unit as $u
+      | if   $u=="Ki" then ($n|tonumber)/1024
+        elif $u=="Mi" then ($n|tonumber)
+        elif $u=="Gi" then ($n|tonumber)*1024
+        else ($n|tonumber)/1024
+        end
+      | floor
+      | tostring
+    ),
+    (
+      .status.allocatable.memory
+      | capture("(?<num>[0-9]+)(?<unit>[KMG]i)?")
+      | .num as $n | .unit as $u
+      | if   $u=="Ki" then ($n|tonumber)/1024
+        elif $u=="Mi" then ($n|tonumber)
+        elif $u=="Gi" then ($n|tonumber)*1024
+        else ($n|tonumber)/1024
+        end
+      | floor
+      | tostring
+    )
+  ] | @tsv' | while IFS=$'\t' read -r name role cpu_cap cpu_alloc mem_cap mem_alloc; do
+    echo -e "$name\t$role\t${cpu_cap}m\t${cpu_alloc}m\t${cpu_used[$name]}\t${mem_cap}Mi\t${mem_alloc}Mi\t${mem_used[$name]}"
+  done
+) | column -t
+```
+
 ### ALLOCAZIONE RISORSE ###
 ```
 alias util='kubectl get nodes --no-headers | awk '\''{print $1}'\'' | xargs -I {} sh -c '\''echo {} ; kubectl describe node {} | grep Allocated -A 5 | grep -ve Event -ve Allocated -ve percent -ve -- ; echo '\'''
