@@ -556,55 +556,44 @@ kubectl get deployments --namespace=$(kubectl config view --minify --output 'jso
 
 ### OVERVIEW RISORSE NODI ###
 ```
+declare -A cpu_used mem_used
+
+while read -r name cpu mem; do
+  cpu_used[$name]="${cpu%m}m"
+  mem_used[$name]="${mem%Mi}Mi"
+done < <(kubectl top nodes --no-headers 2>/dev/null | awk '{print $1, $2, $3}')
+
 (
-  echo -e "NAME\tROLE\tCPU_CAPACITY\tCPU_ALLOCATABLE\tCPU_USED\tMEM_CAPACITY\tMEM_ALLOCATABLE\tMEM_USED"
+echo -e "NAME\tROLE\tCPU_CAPACITY\tCPU_ALLOCATABLE\tCPU_USED\tMEM_CAPACITY\tMEM_ALLOCATABLE\tMEM_USED"
 
-  declare -A cpu_used mem_used
-  while read -r name cpu mem; do
-    cpu_used[$name]="${cpu%m}m"      # aggiunge 'm' solo se non c'è
-    mem_used[$name]="${mem%Mi}Mi"    # aggiunge 'Mi' solo se non c'è
-  done < <(kubectl top nodes --no-headers | awk '{print $1, $2, $3}')
-
-  kubectl get nodes -o json | jq -r '
+kubectl get nodes -o json | jq -r '
   .items[] |
   [
     .metadata.name,
-    (
-      .metadata.labels
-      | to_entries
-      | map(select(.key | startswith("node-role.kubernetes.io/")))
-      | map(.key | sub("node-role.kubernetes.io/"; ""))
-      | join(",")
-    ),
-    .status.capacity.cpu,
-    .status.allocatable.cpu,
-    (
-      .status.capacity.memory
-      | capture("(?<num>[0-9]+)(?<unit>[KMG]i)?")
-      | .num as $n | .unit as $u
-      | if   $u=="Ki" then ($n|tonumber)/1024
-        elif $u=="Mi" then ($n|tonumber)
-        elif $u=="Gi" then ($n|tonumber)*1024
-        else ($n|tonumber)/1024
-        end
-      | floor
-      | tostring
-    ),
-    (
-      .status.allocatable.memory
-      | capture("(?<num>[0-9]+)(?<unit>[KMG]i)?")
-      | .num as $n | .unit as $u
-      | if   $u=="Ki" then ($n|tonumber)/1024
-        elif $u=="Mi" then ($n|tonumber)
-        elif $u=="Gi" then ($n|tonumber)*1024
-        else ($n|tonumber)/1024
-        end
-      | floor
-      | tostring
-    )
-  ] | @tsv' | while IFS=$'\t' read -r name role cpu_cap cpu_alloc mem_cap mem_alloc; do
-    echo -e "$name\t$role\t${cpu_cap}m\t${cpu_alloc}m\t${cpu_used[$name]}\t${mem_cap}Mi\t${mem_alloc}Mi\t${mem_used[$name]}"
-  done
+    (.metadata.labels | to_entries | map(select(.key | startswith("node-role.kubernetes.io/"))) | map(.key | sub("node-role.kubernetes.io/"; "")) | join(",")),
+    (if (.status.capacity.cpu | test("m$")) then .status.capacity.cpu else ((.status.capacity.cpu|tonumber)*1000|tostring)+"m" end),
+    (if (.status.allocatable.cpu | test("m$")) then .status.allocatable.cpu else ((.status.allocatable.cpu|tonumber)*1000|tostring)+"m" end),
+    (.status.capacity.memory | capture("(?<num>[0-9]+)(?<unit>[KMG]i)?") | .num as $n | .unit as $u |
+      if $u=="Ki" then ($n|tonumber)/1024
+      elif $u=="Mi" then ($n|tonumber)
+      elif $u=="Gi" then ($n|tonumber)*1024
+      else ($n|tonumber)/1024 end | floor | tostring),
+    (.status.allocatable.memory | capture("(?<num>[0-9]+)(?<unit>[KMG]i)?") | .num as $n | .unit as $u |
+      if $u=="Ki" then ($n|tonumber)/1024
+      elif $u=="Mi" then ($n|tonumber)
+      elif $u=="Gi" then ($n|tonumber)*1024
+      else ($n|tonumber)/1024 end | floor | tostring)
+  ] |
+  @tsv
+' | while IFS=$'\t' read -r name role cpu_cap cpu_alloc mem_cap mem_alloc; do
+    [[ "$role" != *worker* ]] && continue
+    # Aggiunge suffissi se mancanti
+    [[ "$cpu_cap" != *m ]] && cpu_cap="${cpu_cap}m"
+    [[ "$cpu_alloc" != *m ]] && cpu_alloc="${cpu_alloc}m"
+    [[ "$mem_cap" != *Mi ]] && mem_cap="${mem_cap}Mi"
+    [[ "$mem_alloc" != *Mi ]] && mem_alloc="${mem_alloc}Mi"
+    echo -e "$name\t$role\t$cpu_cap\t$cpu_alloc\t${cpu_used[$name]:-N/A}\t$mem_cap\t$mem_alloc\t${mem_used[$name]:-N/A}"
+done
 ) | column -t
 ```
 
