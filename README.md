@@ -557,17 +557,14 @@ kubectl get deployments --namespace=$(kubectl config view --minify --output 'jso
 ### OVERVIEW RISORSE NODI ###
 ```
 (
-  # header
   echo -e "NAME\tROLE\tCPU_CAPACITY\tCPU_ALLOCATABLE\tCPU_USED\tMEM_CAPACITY\tMEM_ALLOCATABLE\tMEM_USED"
 
-  # salva top nodes in array associativi, rimuovendo suffissi e percentuali
   declare -A cpu_used mem_used
   while read -r name cpu mem; do
     cpu_used[$name]="${cpu%m}m"      # aggiunge 'm' solo se non c'è
     mem_used[$name]="${mem%Mi}Mi"    # aggiunge 'Mi' solo se non c'è
   done < <(kubectl top nodes --no-headers | awk '{print $1, $2, $3}')
 
-  # stampa tutti i nodi con Capacity/Allocatable + Used
   kubectl get nodes -o json | jq -r '
   .items[] |
   [
