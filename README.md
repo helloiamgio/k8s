@@ -74,8 +74,7 @@ kubectl get pods --sort-by=.metadata.creationTimestamp
 
 ### list non running pod ###
 ```
-kubectl get pods -A --field-selector=status.phase!=Running | grep -v Complete
-kubectl get pod --field-selector status.phase!=Running -o=custom-columns=NAME:.metadata.name,STATUS:.status.phase,NAMEDPACE:.metadata.
+kubectl get pods -A -o custom-columns=NAMESPACE:.metadata.namespace,POD:.metadata.name,STATUS:.status.phase,CONTAINERS:.spec.containers[*].name | grep -v 'Running'
 ```
 ### list all container in a pod/namespace ###
 ```
