@@ -661,6 +661,41 @@ kubectl patch svc prometheus-grafana --type='json' -p '[{"op": "add", "path":"/s
 kubectl patch service prometheus-kube-prometheus-prometheus -n kube-prometheus-stack -p '{"spec": {"type": "ClusterIP"}}'
 ```
 
+### match deployment vs service ###
+```
+#!/bin/bash
+
+current_ns=$(kubectl config view --minify --output 'jsonpath={..namespace}')
+current_ns=${current_ns:-default}  # se non c'è namespace, usa default
+
+echo "Namespace: $current_ns"
+echo "Deployment -> Labels -> Service(s) matching"
+echo "------------------------------------------------"
+
+for deploy in $(kubectl get deploy -n $current_ns -o jsonpath='{.items[*].metadata.name}'); do
+    labels=$(kubectl get deploy $deploy -n $current_ns -o json | jq -r '.spec.template.metadata.labels | to_entries | map("\(.key)=\(.value)") | join(", ")')
+    echo "Deployment: $deploy"
+    echo "  Labels: $labels"
+
+    for svc in $(kubectl get svc -n $current_ns -o jsonpath='{.items[*].metadata.name}'); do
+        svc_selector=$(kubectl get svc $svc -n $current_ns -o json | jq -r '.spec.selector // {} | to_entries | map("\(.key)=\(.value)") | join(", ")')
+        if [ -n "$svc_selector" ]; then
+            match=1
+            for label in $(echo $svc_selector | tr ', ' '\n'); do
+                if ! echo $labels | grep -q "$label"; then
+                    match=0
+                    break
+                fi
+            done
+            if [ $match -eq 1 ]; then
+                echo "  -> Service matching: $svc"
+            fi
+        fi
+    done
+    echo ""
+done
+```
+
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ## **CRONJOB**
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
