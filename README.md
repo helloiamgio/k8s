@@ -90,7 +90,9 @@ kubectl get pod --all-s | awk '{print $3}' | awk -F/ '{s+=$1} END {print s}' ###
 
 ### get pods x nodes ### 
 ```
-kubectl get pods --all-s -o wide --field-selector spec.nodeName=
+kubectl get pods --all -o wide --field-selector spec.nodeName=
+kubectl get pods --all-namespaces -o wide --field-selector spec.nodeName=ocp2-produzione-g79jm-infra-0-2lw65
+
 ```
 
 ### get pods x  ### 
