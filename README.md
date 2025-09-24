@@ -336,10 +336,14 @@ kubectl get events --sort-by='.lastTimestamp' |
 kubectl get events --all-namespaces --field-selector type=Warning
 ```
 
-
 ### events sorted ###
 ```
 kubectl get events --sort-by=.metadata.creationTimestamp
+```
+
+### events OOMKilled ###
+```
+kubectl get events -A --field-selector reason=OOMKilled --sort-by=.lastTimestamp
 ```
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
