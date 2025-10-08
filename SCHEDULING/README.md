@@ -1,162 +1,105 @@
-# Scheduling in Kubernetes
+# Scheduling in Kubernetes: funzionamento avanzato
 
-Questa guida spiega come funziona il processo di *scheduling* in Kubernetes: come i **Pod** vengono assegnati ai **nodi** del cluster in base a fattori di compatibilità, priorità, risorse e regole di policy. Le spiegazioni sono in italiano e includono immagini esplicative.
+Questa guida descrive in dettaglio come funziona lo scheduling in Kubernetes, con particolare attenzione al meccanismo di **scoring / ranking**. Si basa sull’articolo *Kubernetes Scheduling: How It Works and Key Factors* di PerfectScale e sulla documentazione ufficiale del framework di scheduling di Kubernetes. :contentReference[oaicite:1]{index=1}
 
 ---
 
 ## Indice
 
 1. Panoramica  
-2. Il processo di scheduling  
-   - Fase di filtraggio (Filtering / Predicates)  
-   - Fase di punteggio (Scoring / Priorities)  
-   - Binding (Associazione Pod → Nodo)  
-3. Meccanismi per influenzare lo scheduling  
-   - nodeSelector  
-   - nodeAffinity  
-   - podAffinity / podAntiAffinity  
-   - taints e tolerations  
-   - topologySpreadConstraints  
-4. Altri concetti avanzati  
-   - Preemption  
-   - QoS Classes  
-   - Scheduler personalizzati  
-   - Limitazioni e sfide  
-5. Glossario  
-6. Risorse aggiuntive  
+2. Flusso generale dello scheduling  
+3. Fase di filtraggio (Filter)  
+4. Fase di punteggio / ranking (Score / Normalize / Combine)  
+   - PreScore / Score plugins  
+   - NormalizeScore  
+   - Ponderazione (weights)  
+5. Binding / Associazione  
+6. Alcune estensioni e casi particolari  
+   - PostFilter & Preemption  
+   - StorageCapacityScoring  
+   - Plugin custom  
+7. Meccanismi per influenzare lo scheduling  
+   - Affinità / anti-affinità, nodeAffinity  
+   - Taints / Tolerations  
+   - TopologySpreadConstraints  
+8. Glossario  
+9. Riferimenti  
 
 ---
 
 ## 1. Panoramica
 
-Quando crei un workload (ad esempio un `Deployment`), il **kube‑apiserver** riceve la richiesta e la memorizza in **etcd**. Quindi il controller genera i Pod che nascono con status `Pending`, ovvero non assegnati a nessun nodo.  
-È il **kube‑scheduler** che si occupa di decidere, per ogni Pod in stato `Pending`, su quale nodo debba essere eseguito.
+Quando un Pod viene creato (ad esempio tramite `kubectl apply`), esso entra in stato `Pending` finché non viene schedulato su un nodo. Il **kube-scheduler** monitora continuamente i Pod senza nodo assegnato e cerca di “piazzarli” nei nodi più opportuni.  
 
-![Flusso di scheduling in Kubernetes](https://tse3.mm.bing.net/th/id/OIP.H2LKePqGBcJz8LPuhM4YrgHaEK?pid=Api)
+Il processo si articola in diverse fasi: filtraggio, punteggio (scoring), normalizzazione, combinazione dei punteggi e binding.  
 
----
+L’articolo di PerfectScale evidenzia che “the scheduler ranks each compatible node and the one with the highest score is chosen for the Pod.” :contentReference[oaicite:2]{index=2}
 
-## 2. Il processo di scheduling
-
-Il processo di scheduling si compone di tre macro‑fasi:
-
-1. **Filtraggio (Filtering)**  
-2. **Punteggio / Classifica (Scoring / Ranking)**  
-3. **Binding (associazione effettiva del Pod al Nodo)**  
-
-### a) Filtraggio (Filtering / Predicates)
-
-![Fase di filtraggio dei nodi](https://tse4.mm.bing.net/th/id/OIP.LdVTa7CSUpJWCLhohM8brQHaJD?pid=Api)
-
-In questa fase lo scheduler valuta tutti i nodi del cluster e scarta quelli che **non soddisfano** i requisiti minimi del Pod. Solo i nodi che “passano” il filtraggio sono considerati *feasible nodes*.
-
-### b) Punteggio (Scoring / Priorities)
-
-![Fase di scoring in Kubernetes](https://tse4.mm.bing.net/th/id/OIP.r9mhAU0JRPEypOUq2O7gowHaGA?pid=Api)
-
-Tra i nodi compatibili, lo scheduler calcola un punteggio per ciascuno, in base a funzioni di priorità. L’obiettivo è scegliere non solo un nodo compatibile, ma il **migliore** secondo criteri di efficienza, bilanciamento del carico e altri vincoli.
-
-### c) Binding
-
-![Binding finale del Pod al nodo scelto](https://tse4.mm.bing.net/th/id/OIP.9nvkREG34GCLCGzy4ooknQHaHr?pid=Api)
-
-Una volta scelto il nodo migliore, lo scheduler effettua il **binding**: associa il Pod al nodo aggiornando lo stato del Pod (attraverso l’API server / etcd). A questo punto il kubelet del nodo prescelto si accorge del nuovo Pod e procede a far partire i container.
+Nella documentazione ufficiale, il framework è strutturato come plugin estensibili in vari punti (PreFilter, Filter, PreScore, Score, NormalizeScore, PostFilter). :contentReference[oaicite:3]{index=3}
 
 ---
 
-## 3. Meccanismi per influenzare lo scheduling
+## 2. Flusso generale dello scheduling
 
-### nodeSelector
+Ecco un diagramma semplificato del flusso:  
 
-```yaml
-spec:
-  nodeSelector:
-    gpu: "true"
-```
+1. Il Pod viene creato → stato Pending  
+2. Il scheduler lo intercetta  
+3. **Filtering**: scarta nodi che non possono supportarlo  
+4. **Scoring**: per ogni nodo rimanente calcola un punteggio  
+5. **Normalize & Combine**: normalizza i punteggi e li combina secondo pesi dei plugin  
+6. Seleziona il nodo con punteggio più alto  
+7. **Binding**: associa il Pod al nodo scelto  
+8. Il `kubelet` sul nodo assegnato avvia i container  
 
-### nodeAffinity
-
-```yaml
-affinity:
-  nodeAffinity:
-    requiredDuringSchedulingIgnoredDuringExecution:
-      nodeSelectorTerms:
-      - matchExpressions:
-        - key: zone
-          operator: In
-          values:
-          - europe-west1
-```
-
-### podAntiAffinity
-
-```yaml
-podAntiAffinity:
-  preferredDuringSchedulingIgnoredDuringExecution:
-  - weight: 100
-    podAffinityTerm:
-      labelSelector:
-        matchLabels:
-          app: web
-      topologyKey: "kubernetes.io/hostname"
-```
-
-### Taints e Tolerations
-
-```yaml
-tolerations:
-- key: "gpu-dedicated"
-  operator: "Equal"
-  value: "true"
-  effect: "NoSchedule"
-```
-
-### topologySpreadConstraints
-
-```yaml
-topologySpreadConstraints:
-- maxSkew: 1
-  topologyKey: "zone"
-  whenUnsatisfiable: DoNotSchedule
-  labelSelector:
-    matchLabels:
-      app: my-app
-```
+Nell’immagine: nodi filtrati, nodi con punteggi, nodo scelto.  
+(Vedi figura sopra)  
 
 ---
 
-## 4. Altri concetti avanzati
+## 3. Fase di filtraggio (Filter)
 
-### Preemption
+In questa fase il scheduler esegue una serie di controlli (plugin di tipo *Filter*) su ciascun nodo candidato, e scarta quelli che **non soddisfano requisiti “hard”** del Pod. Se un nodo fallisce anche un solo plugin Filter, non sarà più considerato nelle fasi successive. :contentReference[oaicite:4]{index=4}
 
-Se lo scheduler non trova risorse libere per un pod ad alta priorità, può “preemptare” (ossia terminare) pod a priorità inferiore per liberare spazio.
+Esempi di controlli:
 
-### QoS Classes
+- **PodFitsResources**: il nodo deve avere risorse libere sufficienti (CPU, memoria) :contentReference[oaicite:5]{index=5}  
+- **NodeUnschedulable**: esclude nodi marcati come non schedulabili  
+- **PodToleratesNodeTaints**: verifica che il Pod tolleri eventuali taint del nodo  
+- **VolumeBinding / Storage**: controlli relativi ai volumi richiesti (zone, disponibilità)  
+- **NodeSelector / NodeAffinity “required”**: se il Pod richiede etichette specifiche  
+- Altri plugin relativi a limiti di volumi CSI, conflitti di disco, porta host, ecc. :contentReference[oaicite:6]{index=6}  
 
-- **Guaranteed**: `requests == limits`
-- **Burstable**: `requests < limits`
-- **BestEffort**: nessuna richiesta esplicita
-
-### Scheduler personalizzati
-
-Puoi creare scheduler custom oltre al default `kube-scheduler` e assegnare pod specifici tramite `schedulerName`.
-
----
-
-## 5. Glossario
-
-| Termine | Definizione |
-|---|---|
-| Pod | Unità atomica di deployment in Kubernetes |
-| Nodo | Macchina fisica o virtuale che ospita i Pod |
-| kubelet | Agente che gestisce i container sul nodo |
-| kube-scheduler | Componente che decide su quale nodo schedulare i Pod |
-| Taint / Toleration | Meccanismi per vincolare i pod su nodi specifici |
-| Affinità / Anti-affinità | Regole di prossimità o separazione tra pod |
-| QoS Classes | Classi di servizio in base a richieste e limiti |
+Se non resta nessun nodo factibile dopo il filtraggio, si può attivare la fase **PostFilter** (es. preemption) per provare a liberare nodi tramite rimozione di altri pod. :contentReference[oaicite:7]{index=7}
 
 ---
 
-## 6. Risorse aggiuntive
+## 4. Fase di punteggio / ranking (Scoring / Normalize / Combine)
 
-- Documentazione ufficiale Kubernetes: [https://kubernetes.io/docs/concepts/scheduling-eviction/](https://kubernetes.io/docs/concepts/scheduling-eviction/)
+Questa è la parte che vuoi approfondire: come i nodi che “superano” il filtro vengono valutati e ordinati.
+
+### 4.1 PreScore e Score Plugins
+
+- **PreScore** plugin: esegue lavoro preliminare utile per il calcolo del punteggio (es. aggregare dati, preparare struttura dati condivisa). :contentReference[oaicite:8]{index=8}  
+- **Score** plugin: per ogni nodo, calcola un punteggio intermedio basato su un criterio specifico. Ogni plugin Score restituisce un valore in un range definito (es. 0–100 o valori configurati). :contentReference[oaicite:9]{index=9}  
+
+Esempi di plugin Score comuni:
+
+- **NodeResourcesBalancedAllocation**: favorisce nodi con uso bilanciato di CPU vs memoria  
+- **ImageLocality**: preferisce nodi che già hanno l’immagine richiesta in cache  
+- **InterPodAffinity / AntiAffinity**: considera la vicinanza o la distanza a pod con etichette specifiche  
+- **NodePreferAvoidPods**: penalizza nodi dove ci sono pod che l’utente preferirebbe evitare  
+- **StorageCapacityScoring**: se abilitato, calcola un punteggio basato sulla capacità residua dei volumi (feature alpha in v1.33). :contentReference[oaicite:10]{index=10}  
+
+### 4.2 NormalizeScore
+
+Dopo che ogni Score plugin ha prodotto valori per i nodi, entra in gioco la fase di normalizzazione (**NormalizeScore**). Serve a trasformare i punteggi in un range comune e comparabile, garantendo che nessun plugin domini indebitamente il risultato solo per differenze di scala. :contentReference[oaicite:11]{index=11}
+
+Ad esempio, se un plugin genera valori da 0 a 10 e un altro da 0 a 1000, la normalizzazione riporta tutto in un range uniforme (es. 0–100) prima della fase di somma ponderata.
+
+### 4.3 Combinazione e pesi (weights)
+
+Dopo la normalizzazione, il scheduler combina i punteggi dei vari plugin, moltiplicandoli per pesi configurati (weight) e sommando i risultati per ottenere un **punteggio totale** per ciascun nodo. :contentReference[oaicite:12]{index=12}  
+
+Formula semplificata:
+
