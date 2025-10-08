@@ -1,105 +1,150 @@
-# Scheduling in Kubernetes: funzionamento avanzato
+# Scheduling in Kubernetes — spiegazione dettagliata (basata su PerfectScale)
 
-Questa guida descrive in dettaglio come funziona lo scheduling in Kubernetes, con particolare attenzione al meccanismo di **scoring / ranking**. Si basa sull’articolo *Kubernetes Scheduling: How It Works and Key Factors* di PerfectScale e sulla documentazione ufficiale del framework di scheduling di Kubernetes. :contentReference[oaicite:1]{index=1}
+Questa guida approfondita descrive il processo di scheduling in Kubernetes e, in particolare, lo **scoring / ranking** dei nodi. Il testo si basa sull'articolo *Kubernetes Scheduling: How It Works and Key Factors* di PerfectScale (link in fondo) e sulla documentazione ufficiale del framework di scheduling di Kubernetes. Le immagini sono prese dallo stesso articolo (hotlink alle immagini sul CDN di PerfectScale).
 
 ---
 
 ## Indice
 
 1. Panoramica  
-2. Flusso generale dello scheduling  
-3. Fase di filtraggio (Filter)  
-4. Fase di punteggio / ranking (Score / Normalize / Combine)  
+2. Flusso generale dello scheduling (diagramma)  
+3. Filtraggio (Filtering / Predicates) — breve riepilogo + immagine  
+4. Scoring / Ranking — spiegazione dettagliata e esempio numerico (con formula di normalizzazione)  
    - PreScore / Score plugins  
-   - NormalizeScore  
-   - Ponderazione (weights)  
-5. Binding / Associazione  
-6. Alcune estensioni e casi particolari  
-   - PostFilter & Preemption  
-   - StorageCapacityScoring  
-   - Plugin custom  
-7. Meccanismi per influenzare lo scheduling  
-   - Affinità / anti-affinità, nodeAffinity  
-   - Taints / Tolerations  
-   - TopologySpreadConstraints  
-8. Glossario  
-9. Riferimenti  
+   - NormalizeScore: cosa fa e perché è importante  
+   - Combinazione dei punteggi con pesi (weights)  
+   - Esempio numerico passo-passo  
+5. Binding e casi particolari (preemption, PostFilter)  
+6. Come influenzare lo scheduling dal manifesto del Pod (nodeAffinity, taints, podAffinity, topologySpread)  
+7. Riferimenti e immagini
 
 ---
 
-## 1. Panoramica
+## 1) Panoramica (breve)
 
-Quando un Pod viene creato (ad esempio tramite `kubectl apply`), esso entra in stato `Pending` finché non viene schedulato su un nodo. Il **kube-scheduler** monitora continuamente i Pod senza nodo assegnato e cerca di “piazzarli” nei nodi più opportuni.  
-
-Il processo si articola in diverse fasi: filtraggio, punteggio (scoring), normalizzazione, combinazione dei punteggi e binding.  
-
-L’articolo di PerfectScale evidenzia che “the scheduler ranks each compatible node and the one with the highest score is chosen for the Pod.” :contentReference[oaicite:2]{index=2}
-
-Nella documentazione ufficiale, il framework è strutturato come plugin estensibili in vari punti (PreFilter, Filter, PreScore, Score, NormalizeScore, PostFilter). :contentReference[oaicite:3]{index=3}
+Quando un Pod viene creato, il `kube-scheduler` valuta i nodi del cluster per assegnare il Pod al nodo "migliore". Il processo principale è in tre fasi: **filtraggio** (escludere nodi non idonei), **scoring** (assegnare un punteggio ai nodi rimasti) e **binding** (associare il pod al nodo con punteggio più alto). Le spiegazioni e diagrammi seguenti provengono dall'articolo di PerfectScale (vedi riferimenti).
 
 ---
 
-## 2. Flusso generale dello scheduling
+## 2) Flusso generale dello scheduling (diagramma)
 
-Ecco un diagramma semplificato del flusso:  
+![Kubernetes Scheduling Process](https://cdn.prod.website-files.com/635e4ccf77408db6bd802ae6/67973c6ae9d04f194a8141b8_AD_4nXe-MnVx9bQ4I6ZXMEzEhl6yQrZj1KdFboR32_9E4Aa3xWqTtDTbgRx3P72LBkTQmag_otjB6q-pfW_7Cwd46NUYjPJVwitYO_AvytfUtXcvjXXSoPFApbcnesYoEKWMVKaXXJ9UcA.jpeg)
 
-1. Il Pod viene creato → stato Pending  
-2. Il scheduler lo intercetta  
-3. **Filtering**: scarta nodi che non possono supportarlo  
-4. **Scoring**: per ogni nodo rimanente calcola un punteggio  
-5. **Normalize & Combine**: normalizza i punteggi e li combina secondo pesi dei plugin  
-6. Seleziona il nodo con punteggio più alto  
-7. **Binding**: associa il Pod al nodo scelto  
-8. Il `kubelet` sul nodo assegnato avvia i container  
-
-Nell’immagine: nodi filtrati, nodi con punteggi, nodo scelto.  
-(Vedi figura sopra)  
+*Figura: flusso generale del processo di scheduling (Fonte: PerfectScale).*
 
 ---
 
-## 3. Fase di filtraggio (Filter)
+## 3) Filtraggio (Filtering / Predicates)
 
-In questa fase il scheduler esegue una serie di controlli (plugin di tipo *Filter*) su ciascun nodo candidato, e scarta quelli che **non soddisfano requisiti “hard”** del Pod. Se un nodo fallisce anche un solo plugin Filter, non sarà più considerato nelle fasi successive. :contentReference[oaicite:4]{index=4}
+![Filtering Phase](https://cdn.prod.website-files.com/635e4ccf77408db6bd802ae6/67973c6ab83dd57ac7dfc41f_AD_4nXer7VWzcpcsN6PaQbmRUIly_c4YTu2SPsUDpO3-w7uDsO533IsxSWAo05o7RAndcZKABXz4uSC8oMF89N9QMtec0qGQexe4UohmUeG7-tiJqrLQ20z40EyfuB0Rzfva82tPEO3OEQ.jpeg)
 
-Esempi di controlli:
+La fase di **filtering** applica controlli "hard" su ciascun nodo (es.: disponibilità risorse, taints/tolerations, capacità di mount del volume, nodeSelector/nodeAffinity richieste). I nodi che non passano almeno uno dei predicati vengono scartati e non considerati per lo scoring.
 
-- **PodFitsResources**: il nodo deve avere risorse libere sufficienti (CPU, memoria) :contentReference[oaicite:5]{index=5}  
-- **NodeUnschedulable**: esclude nodi marcati come non schedulabili  
-- **PodToleratesNodeTaints**: verifica che il Pod tolleri eventuali taint del nodo  
-- **VolumeBinding / Storage**: controlli relativi ai volumi richiesti (zone, disponibilità)  
-- **NodeSelector / NodeAffinity “required”**: se il Pod richiede etichette specifiche  
-- Altri plugin relativi a limiti di volumi CSI, conflitti di disco, porta host, ecc. :contentReference[oaicite:6]{index=6}  
-
-Se non resta nessun nodo factibile dopo il filtraggio, si può attivare la fase **PostFilter** (es. preemption) per provare a liberare nodi tramite rimozione di altri pod. :contentReference[oaicite:7]{index=7}
+**Esempi di predicati comuni**:
+- `PodFitsResources` (sufficiente CPU/memoria)  
+- `NodeUnschedulable`  
+- `VolumeBinding` / storage zone compatibility  
+- `PodToleratesNodeTaints`  
+(PerfectScale indica che ci sono 13 predicati di default nel processo di filtraggio.)
 
 ---
 
-## 4. Fase di punteggio / ranking (Scoring / Normalize / Combine)
+## 4) Scoring / Ranking — spiegazione approfondita
 
-Questa è la parte che vuoi approfondire: come i nodi che “superano” il filtro vengono valutati e ordinati.
+![Scoring Phase](https://cdn.prod.website-files.com/635e4ccf77408db6bd802ae6/67973c6aa7fa275459cde909_AD_4nXfCwGvbwj8_RfwIzpl46FXMmBeOxjkt3DlIJ_N2dC3RyWZajDK0aldyPrpgvEqwXFYyDdCeSqEsNrV9awExW8-hLriQ3gZJYUdi3OsgK9Rhdyvf5D0QCXDwNq1uwXyYWeW3IBroUA.jpeg)
 
-### 4.1 PreScore e Score Plugins
+Questa è la parte centrale della guida. Dopo il filtraggio lo scheduler usa *plugin* di tipo **Score** per **valutare ogni nodo compatibile**. Ogni plugin Score calcola un valore (raw score) per ciascun nodo in base a un criterio (image locality, bilanciamento risorse, affinità inter-pod, ecc.).
 
-- **PreScore** plugin: esegue lavoro preliminare utile per il calcolo del punteggio (es. aggregare dati, preparare struttura dati condivisa). :contentReference[oaicite:8]{index=8}  
-- **Score** plugin: per ogni nodo, calcola un punteggio intermedio basato su un criterio specifico. Ogni plugin Score restituisce un valore in un range definito (es. 0–100 o valori configurati). :contentReference[oaicite:9]{index=9}  
+### 4.1 PreScore e Score
+- **PreScore**: plugin opzionale che prepara dati condivisi utili per lo scoring (ad es. calcoli aggregati).  
+- **Score**: plugin che, per ogni nodo, ritorna un punteggio (intero) che rappresenta quanto il nodo soddisfa quel criterio.
 
-Esempi di plugin Score comuni:
+> Nota: idealmente i plugin Score producono valori nell'intervallo atteso (tipicamente 0–100), ma non è sempre il caso, quindi esiste la fase di normalizzazione.
 
-- **NodeResourcesBalancedAllocation**: favorisce nodi con uso bilanciato di CPU vs memoria  
-- **ImageLocality**: preferisce nodi che già hanno l’immagine richiesta in cache  
-- **InterPodAffinity / AntiAffinity**: considera la vicinanza o la distanza a pod con etichette specifiche  
-- **NodePreferAvoidPods**: penalizza nodi dove ci sono pod che l’utente preferirebbe evitare  
-- **StorageCapacityScoring**: se abilitato, calcola un punteggio basato sulla capacità residua dei volumi (feature alpha in v1.33). :contentReference[oaicite:10]{index=10}  
+### 4.2 NormalizeScore — perché serve e come funziona
+Dopo aver eseguito tutti i plugin Score, entra in gioco la fase **NormalizeScore**. L'obiettivo è rendere i punteggi confrontabili fra plugin con scale diverse: la normalizzazione scala i punteggi di ciascun plugin in un intervallo comune (ad esempio 0–100) prima della combinazione ponderata.
 
-### 4.2 NormalizeScore
+Una formula di normalizzazione lineare (usata comunemente e descritta nella documentazione) è:
 
-Dopo che ogni Score plugin ha prodotto valori per i nodi, entra in gioco la fase di normalizzazione (**NormalizeScore**). Serve a trasformare i punteggi in un range comune e comparabile, garantendo che nessun plugin domini indebitamente il risultato solo per differenze di scala. :contentReference[oaicite:11]{index=11}
+```
+normalized = 100 * (raw - min_raw) / (max_raw - min_raw)
+```
 
-Ad esempio, se un plugin genera valori da 0 a 10 e un altro da 0 a 1000, la normalizzazione riporta tutto in un range uniforme (es. 0–100) prima della fase di somma ponderata.
+Dove `min_raw` e `max_raw` sono rispettivamente il valore minimo e massimo prodotti dallo stesso plugin su tutti i nodi valutati. Dopo questa trasformazione, il nodo con il valore raw uguale a `min_raw` riceve 0, quello con `max_raw` riceve 100 e gli altri sono scalati linearmente.
 
-### 4.3 Combinazione e pesi (weights)
+Fonti ufficiali indicano chiaramente che dopo la fase di NormalizeScore lo scheduler combinerà i punteggi normalizzati dei plugin in base ai pesi configurati. ([kubernetes.io], [scheduler-plugins]).
 
-Dopo la normalizzazione, il scheduler combina i punteggi dei vari plugin, moltiplicandoli per pesi configurati (weight) e sommando i risultati per ottenere un **punteggio totale** per ciascun nodo. :contentReference[oaicite:12]{index=12}  
+### 4.3 Combinazione dei punteggi (weights)
+Una volta normalizzati, i punteggi di ciascun plugin sono combinati con una somma pesata:
 
-Formula semplificata:
+```
+score_totale(nodo) = Σ ( weight_plugin_i × normalized_score_plugin_i(nodo) )
+```
 
+I pesi (`weight_plugin_i`) sono definiti nella configurazione del scheduler (e.g. in `schedulerPolicy` o nella configurazione del framework dei plugin). Il nodo con `score_totale` più alto viene scelto per il binding.
+
+### 4.4 Esempio numerico passo-passo
+
+Immaginiamo 3 nodi (`N1`, `N2`, `N3`) e due plugin di scoring (`A` e `B`) che producono raw score come segue:
+
+- Plugin A (raw): N1=30, N2=50, N3=10  
+- Plugin B (raw): N1=400, N2=100, N3=300
+
+**Step 1 — Normalize per plugin**
+
+Plugin A: min=10, max=50  
+- N1_A_norm = 100 * (30 - 10) / (50 - 10) = 100 * 20 / 40 = 50  
+- N2_A_norm = 100 * (50 - 10) / 40 = 100  
+- N3_A_norm = 100 * (10 - 10) / 40 = 0
+
+Plugin B: min=100, max=400  
+- N1_B_norm = 100 * (400 - 100) / 300 = 100  
+- N2_B_norm = 100 * (100 - 100) / 300 = 0  
+- N3_B_norm = 100 * (300 - 100) / 300 ≈ 66.67 → 67 (arrotondamento)
+
+**Step 2 — Applichiamo i pesi** (esempio: peso A = 1, peso B = 2)
+
+- N1_score_totale = 1×50 + 2×100 = 50 + 200 = **250**  
+- N2_score_totale = 1×100 + 2×0 = 100 + 0 = **100**  
+- N3_score_totale = 1×0 + 2×67 = 0 + 134 = **134**
+
+**Risultato**: viene scelto `N1`, che ha il punteggio totale più alto (250), nonostante N2 avesse il valore raw più alto per il plugin A: la normalizzazione + i pesi hanno cambiato l'ordine finale.
+
+> Questa dimostrazione mostra perché la normalizzazione è fondamentale: senza di essa, plugin con range numerico più ampio avrebbero dominato la classifica.
+
+### 4.5 Dettagli pratici e caveat
+- Alcuni plugin devono ritornare valori già nel range 0–100; altri producono valori in scale diverse e devono implementare `NormalizeScore` (via ScoreExtensions) per adattarsi. Se un plugin restituisce valori fuori range, il scheduler può segnalarlo come errore (vedi issue su GitHub relativo al range [0,100]).
+- Il parametro `percentageOfNodesToScore` influisce su quanti nodi (tra quelli "factibili") saranno effettivamente valutati da molti plugin in cluster molto grandi; questo è un elemento di tuning delle prestazioni del kube-scheduler.
+
+---
+
+## 5) Binding e casi particolari
+
+Dopo la scelta, il scheduler esegue il **binding** (aggiorna il Pod con `nodeName`). Se la bind fallisce (causa concorrenza, nodo non più valido), il ciclo di scheduling riparte. Se non esistono nodi factibili, il framework può ricorrere a meccanismi come **Preemption** per liberare risorse (rimuovendo pod a priorità inferiore), oppure a plugin PostFilter che provano strategie aggiuntive.
+
+---
+
+## 6) Come influenzare lo scheduling dal manifesto del Pod
+
+- `nodeSelector` (vincolo semplice)  
+- `nodeAffinity` (required vs preferred — le preferenze `preferredDuringSchedulingIgnoredDuringExecution` sono trattate come score)  
+- `podAffinity` / `podAntiAffinity` (possono influenzare sia filter che score)  
+- `tolerations` e `taints` (filter hard via taint/noSchedule o preferenze)  
+- `topologySpreadConstraints` (per distribuire i pod su topologie come zone o nodi)
+
+---
+
+## 7) Riferimenti e immagini (fonti)
+
+- Articolo di riferimento (testo e immagini): *Kubernetes Scheduling: How It Works and Key Factors* — PerfectScale. https://www.perfectscale.io/blog/kubernetes-scheduling
+- Documentazione ufficiale: Scheduling Framework — Kubernetes. https://kubernetes.io/docs/concepts/scheduling-eviction/scheduling-framework/  
+- Alcuni approfondimenti su plugin e normalizzazione: scheduler-plugins KEPs e documentazione.
+
+**Immagini hotlinked (Fonte: PerfectScale CDN):**  
+- Diagramma generale: https://cdn.prod.website-files.com/635e4ccf77408db6bd802ae6/67973c6ae9d04f194a8141b8_AD_4nXe-MnVx9bQ4I6ZXMEzEhl6yQrZj1KdFboR32_9E4Aa3xWqTtDTbgRx3P72LBkTQmag_otjB6q-pfW_7Cwd46NUYjPJVwitYO_AvytfUtXcvjXXSoPFApbcnesYoEKWMVKaXXJ9UcA.jpeg  
+- Filtering Phase: https://cdn.prod.website-files.com/635e4ccf77408db6bd802ae6/67973c6ab83dd57ac7dfc41f_AD_4nXer7VWzcpcsN6PaQbmRUIly_c4YTu2SPsUDpO3-w7uDsO533IsxSWAo05o7RAndcZKABXz4uSC8oMF89N9QMtec0qGQexe4UohmUeG7-tiJqrLQ20z40EyfuB0Rzfva82tPEO3OEQ.jpeg  
+- Scoring Phase: https://cdn.prod.website-files.com/635e4ccf77408db6bd802ae6/67973c6aa7fa275459cde909_AD_4nXfCwGvbwj8_RfwIzpl46FXMmBeOxjkt3DlIJ_N2dC3RyWZajDK0aldyPrpgvEqwXFYyDdCeSqEsNrV9awExW8-hLriQ3gZJYUdi3OsgK9Rhdyvf5D0QCXDwNq1uwXyYWeW3IBroUA.jpeg
+
+---
+
+*Fine del file.*
