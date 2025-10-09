@@ -48,7 +48,6 @@ Un’errata configurazione dei limiti CPU può portare a fenomeni come:
 Kubernetes non “prenota” la CPU come la memoria, ma utilizza il **CPU share model** del kernel Linux.  
 Quando il cluster ha carichi elevati, il tempo CPU viene diviso tra i pod in base ai loro **CPU shares**, determinati dalla `request`.
 
-![Kubernetes CPU scheduling explained](https://tse1.mm.bing.net/th/id/OIP.TsQ_jgXbVYkczd0aLqWk3wHaEK?pid=Api)
 
 ### Comportamento chiave
 
