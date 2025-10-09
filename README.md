@@ -130,8 +130,8 @@ kubectl get pod PODNAME -o go-template="{{range .status.containerStatuses}}{{.la
 
 ### Delete Completed pods ### 
 ```
-$ kubectl delete pod --field-selector=status.phase==Succeeded --all-namespaces
-$ kubectl get pods --all-namespaces |  awk '{if ($4 == "Completed") system ("oc delete pod " $2 " -n " $1 )}'
+kubectl delete pod --field-selector=status.phase==Succeeded --all-namespaces
+kubectl get pods --all-namespaces |  awk '{if ($4 == "Completed") system ("oc delete pod " $2 " -n " $1 )}'
 ```
 
 ### List Non Running pods ### 
@@ -141,10 +141,10 @@ kubectl get po -A --sort-by=.metadata.creationTimestamp | grep -vE 'Completed|Ru
 
 ### Additional methods to remove Failed, Pending, Evicted, and all 'Non-Running' pods: ###
 ```
-$ oc delete pod --field-selector=status.phase==Failed --all-namespaces
-$ oc delete pod --field-selector=status.phase==Pending --all-namespaces
-$ oc delete pod --field-selector=status.phase==Evicted --all-namespaces
-$ oc get pods --all-namespaces |  awk '{if ($4 != "Running") system ("oc delete pod " $2 " -n " $1 )}'
+oc delete pod --field-selector=status.phase==Failed --all-namespaces
+oc delete pod --field-selector=status.phase==Pending --all-namespaces
+oc delete pod --field-selector=status.phase==Evicted --all-namespaces
+oc get pods --all-namespaces |  awk '{if ($4 != "Running") system ("oc delete pod " $2 " -n " $1 )}'
 ```
 
 ### Delete Evicted pods ### 
