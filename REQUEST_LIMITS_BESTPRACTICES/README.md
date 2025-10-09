@@ -73,8 +73,6 @@ Quando il cluster ha carichi elevati, il tempo CPU viene diviso tra i pod in bas
 
 - Può causare sbilanciamento nel cluster e comportamenti imprevedibili sotto carico.
 
-![CPU throttling impact](https://tse4.mm.bing.net/th/id/OIP.w0E-4yq4R2Z8VciQ1FweWgHaEK?pid=Api)
-
 ---
 
 ## 5. Best Practices per i limiti CPU
@@ -168,7 +166,6 @@ Strumenti consigliati da PerfectScale:
 - **Vertical Pod Autoscaler** → per suggerimenti automatici sulle risorse
 - **PerfectScale** → analizza pattern di utilizzo e suggerisce limiti ottimali
 
-![CPU monitoring dashboards](https://tse3.mm.bing.net/th/id/OIP.b12a0NKlFvl8Xkn-mj6sWQHaEK?pid=Api)
 
 ---
 
