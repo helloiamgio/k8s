@@ -23,7 +23,6 @@ Basato sull’articolo di PerfectScale *“Kubernetes CPU Limit: Best Practices 
 Le risorse CPU in Kubernetes vengono gestite tramite **request** e **limit**.  
 Definire correttamente questi valori è fondamentale per garantire che i pod abbiano prestazioni costanti senza compromettere la stabilità del cluster.
 
-![CPU throttling Kubernetes](https://tse2.mm.bing.net/th/id/OIP.t0qW1nOeWkgP4p5kUVwWBAHaE8?pid=Api)
 
 Un’errata configurazione dei limiti CPU può portare a fenomeni come:
 
