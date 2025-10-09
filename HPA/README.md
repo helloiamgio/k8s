@@ -9,7 +9,6 @@ Basato sull’articolo “Kubernetes Horizontal Pod Autoscaler (HPA)” di Perfe
 
 L’**HPA** regola automaticamente il numero di repliche (pod) di un deployment in base a metriche come CPU o metriche personalizzate.
 
-![HPA schema](https://www.perfectscale.io/hs-fs/hubfs/hpa-diagram.png)
 
 ---
 
