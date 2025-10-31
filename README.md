@@ -24,7 +24,7 @@ echo 'alias k=kubectl' >> ~/.bashrc ;
 echo 'source <(kubectl completion bash)' >> ~/.bashrc ; 
 echo 'complete -F __start_kubectl k' >> ~/.bashrc ; 
 echo 'source <(kubectl completion bash | sed 's/kubectl/k/g')' >> ~/.bashrc ; 
-echo "source <(kubectl completion bash | sed 's|__start_kubectl kubectl|__start_kubectl ks|g') >> ~/.bashrc
+echo "source <(kubectl completion bash | sed 's|__start_kubectl kubectl|__start_kubectl ks|g')" >> ~/.bashrc
 ```
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -497,6 +497,7 @@ kubectl run newpod --image image1 --overrides='{ "spec": { "affinity": { "nodeAf
 ### aggiungere label ai nodi ###
 ```
 kubectl label nodes grpi-kb1-kv21 app=invydio
+kubectl label node <nome-nodo> node-role.kubernetes.io/worker=worker
 ```
 
 ### aggiungere label a tutti i nodi ###
