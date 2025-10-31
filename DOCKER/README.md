@@ -1,6 +1,8 @@
-# Docker Cheat Sheet
 
-**Want to improve this cheat sheet?  See the [Contributing](#contributing) section!**
+* [ENGLISH](#Docker-Cheat-Sheet-ENG)
+* [ITALIANO](#DOCKER-CHEATSHEET-ITALIANO)
+
+# Docker Cheat Sheet ENG
 
 ## Table of Contents
 
@@ -879,30 +881,9 @@ vim httpd.conf
 docker run --rm -it -v "$PWD/httpd.conf:/usr/local/apache2/conf/httpd.conf:ro" -p "80:80" httpd
 ```
 
-## Contributing
-
-Here's how to contribute to this cheat sheet.
-
-### Open README.md
-
-Click [README.md](https://github.com/wsargent/docker-cheat-sheet/blob/master/README.md) <-- this link
-
-![Click This](images/click.png)
-
-### Edit Page
-
-![Edit This](images/edit.png)
-
-### Make Changes and Commit
-
-![Change This](images/change.png)
-
-![Commit](images/commit.png)
-
 ---
 
-
-# DOCKER-CHEATSHEET.md
+# DOCKER-CHEATSHEET-ITALIANO
 
 > Mega cheatsheet in Italiano — tutti i comandi Docker (base + rete + Docker Compose) con spiegazioni ed esempi.
 > Copia & incolla direttamente. Creato per uso in call / troubleshooting.
