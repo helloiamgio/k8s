@@ -898,3 +898,277 @@ Click [README.md](https://github.com/wsargent/docker-cheat-sheet/blob/master/REA
 ![Change This](images/change.png)
 
 ![Commit](images/commit.png)
+
+---
+
+
+# DOCKER-CHEATSHEET.md
+
+> Mega cheatsheet in Italiano — tutti i comandi Docker (base + rete + Docker Compose) con spiegazioni ed esempi.
+> Copia & incolla direttamente. Creato per uso in call / troubleshooting.
+
+---
+
+## Indice rapido
+1. Introduzione (breve)  
+2. Comandi base container / immagini (con esempi)  
+3. Concetti equivalenti ai Pod (multi-container)  
+4. COMANDI RETE (tutti i comandi `docker network` + opzioni `--network`, `-p`, `--link`, ecc.)  
+5. Volumi e storage  
+6. Docker Compose — spiegazione completa + esempi  
+7. Comandi sistema / diagnostica (utile per rete)  
+8. Troubleshooting rete: checklist + comandi di debug  
+9. Alias / note rapide  
+10. Esempi pratici “copy & paste” — casi reali  
+11. Note avanzate / utili da sapere  
+12. Riferimenti (link ufficiali)
+
+---
+
+# 1) Introduzione rapida
+Docker è un container engine basato su daemon (`dockerd`), compatibile OCI, con networking integrato (bridge, host, macvlan, none).  
+Per orchestrare più container contemporaneamente si usa **Docker Compose**.
+
+---
+
+# 2) COMANDI BASE (container / immagini)
+
+### Info globali
+```bash
+docker --version
+docker info
+docker help
+```
+
+### Immagini
+```bash
+docker pull <image>
+docker images
+docker image inspect <image>
+docker image rm <image>
+docker image tag SOURCE TARGET
+docker save -o file.tar <image>
+docker load -i file.tar
+docker push <registry>/<repo>:tag
+```
+
+### Container (lifecycle)
+```bash
+docker run [OPTIONS] IMAGE [CMD]
+docker create [OPTIONS] IMAGE [CMD]
+docker start <container>
+docker stop <container>
+docker restart <container>
+docker kill <container>
+docker rm <container>
+docker ps
+docker ps -a
+docker exec -it <container> /bin/bash
+docker attach <container>
+docker logs <container>
+docker inspect <container>
+docker port <container>
+docker top <container>
+docker stats <container>
+docker cp <container>:/path /local
+docker commit <container> myimage:tag
+```
+
+---
+
+# 3) Concetti equivalenti ai `pod`
+Docker non ha i *pod* come Podman, ma Compose permette di creare ambienti multi-container con rete condivisa.  
+Puoi anche usare `--network container:<altro>` per condividere lo stesso namespace di rete.
+
+```bash
+docker run -d --name app nginx
+docker run -d --network container:app busybox top
+```
+
+---
+
+# 4) COMANDI RETE
+
+## Gestione reti
+```bash
+docker network ls
+docker network inspect <network>
+docker network create <name>
+docker network create -d bridge mynet
+docker network create -d macvlan --subnet 192.168.1.0/24 --gateway 192.168.1.1 -o parent=eth0 lan_net
+docker network rm <name>
+docker network connect <network> <container>
+docker network disconnect <network> <container>
+```
+
+### Tipi di rete
+- **bridge** (default): NAT tra container e host  
+- **host**: container usa la rete host  
+- **none**: nessuna rete  
+- **macvlan**: container ottiene IP direttamente in LAN
+
+**Esempio macvlan**
+```bash
+sudo docker network create -d macvlan --subnet=192.168.1.0/24 --gateway=192.168.1.1 -o parent=eth0 lan_net
+sudo docker run --network lan_net --ip 192.168.1.150 -d myservice
+```
+
+### Porte
+```bash
+docker run -d -p 8080:80 --name web nginx
+docker port web
+```
+
+---
+
+# 5) Volumi e storage
+```bash
+docker volume create myvol
+docker volume ls
+docker volume inspect myvol
+docker volume rm myvol
+docker run -v /host/path:/container/path IMAGE
+docker run -v myvol:/data IMAGE
+```
+
+---
+
+# 6) Docker Compose — guida completa
+
+Docker Compose definisce applicazioni multi-container in un file `docker-compose.yml`.
+
+## Esempio base (Flask + Redis)
+```yaml
+version: "3.9"
+services:
+  web:
+    build: ./app
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_HOST=redis
+    volumes:
+      - ./app:/app
+    depends_on:
+      - redis
+  redis:
+    image: redis:7
+    volumes:
+      - redis-data:/data
+
+volumes:
+  redis-data:
+```
+
+## Comandi principali
+```bash
+docker compose up -d --build
+docker compose down -v
+docker compose ps
+docker compose logs -f
+docker compose exec web bash
+docker compose config
+docker compose up -d --scale worker=3
+```
+
+## Variabili e .env
+```yaml
+environment:
+  - POSTGRES_PASSWORD=${DB_PASS}
+env_file:
+  - .env
+```
+
+## Healthcheck
+```yaml
+healthcheck:
+  test: ["CMD-SHELL", "curl -f http://localhost:8000 || exit 1"]
+  interval: 10s
+  timeout: 5s
+  retries: 5
+```
+
+## Profiles
+```yaml
+services:
+  debug:
+    image: busybox
+    profiles: ["dev"]
+```
+```bash
+docker compose --profile dev up
+```
+
+---
+
+# 7) Comandi di sistema
+```bash
+docker system info
+docker system df
+docker system prune -a
+docker system prune --volumes
+docker login
+docker logout
+docker events --filter 'container=<name>'
+```
+
+---
+
+# 8) Troubleshooting rete
+1. `docker ps -a` — il container è UP?  
+2. `docker port <container>` — la porta è mappata?  
+3. `docker inspect <container>` — controlla `NetworkSettings`.  
+4. `docker network inspect <network>` — verifica subnet/gateway.  
+5. Test con `curl http://localhost:<porta>`.  
+6. Verifica firewall host (`iptables -t nat -L`).  
+7. Con macvlan, verifica che lo switch accetti MAC multipli.  
+8. Controlla `docker logs`.  
+9. Usa `docker compose logs -f` nei setup multi-container.
+
+---
+
+# 9) Alias / note rapide
+- `depends_on` NON garantisce readiness → usa `healthcheck` o script `wait-for`  
+- Per debugging: `docker exec -it` e `docker logs`  
+- Usa `docker system prune` con cautela (`-v` cancella volumi)  
+- I servizi Compose si risolvono per nome DNS nel network del progetto  
+- `COMPOSE_PROJECT_NAME` o `-p` cambia il prefisso del progetto
+
+---
+
+# 10) Esempi rapidi
+
+### Nginx standalone
+```bash
+docker run -d --name nginx -p 8080:80 nginx
+```
+
+### Multi-container con Compose
+```bash
+docker compose up -d
+docker compose ps
+docker compose logs
+```
+
+### Assegnare IP LAN (macvlan)
+```bash
+sudo docker network create -d macvlan --subnet=192.168.1.0/24 --gateway=192.168.1.1 -o parent=eth0 lan_net
+sudo docker run -d --network lan_net --ip 192.168.1.150 --name web nginx
+```
+
+---
+
+# 11) Note avanzate
+- `docker compose` (plugin) è ora incluso nella CLI (v2)  
+- `docker stack deploy` è per Swarm, non per Compose locale  
+- `macvlan` richiede root e può isolare host-container  
+- Per dev: monta volumi, per prod: usa immagini taggate e nessun bind-mount  
+- Logs centralizzati: `docker compose logs -f > logs.txt`
+
+---
+
+# 12) Riferimenti
+- https://docs.docker.com/
+- https://docs.docker.com/compose/
+- https://docs.docker.com/network/
+- https://docs.docker.com/engine/reference/commandline/
