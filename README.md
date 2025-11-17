@@ -464,6 +464,14 @@ for deployment_name in $deployment_names; do
 done
 ```
 
+### List Labels & NodeSelector per deployment ###
+```
+kubectl get deploy -n <NAMESPACE> -o custom-columns=\
+"NAME:.metadata.name,\
+LABELS:.metadata.labels,\
+NODESELECTOR:.spec.template.spec.nodeSelector"
+```
+
 ### Which deployment use PVC + replicas
 ```
 echo -e "DEPLOYMENT\tNAMESPACE\tPVC_NAME\tREPLICAS"
