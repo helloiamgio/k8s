@@ -122,6 +122,36 @@ kubectl get pv -o custom-columns='NAME:.metadata.name,SERVER:.spec.nfs.server' |
 kubectl get pv -o custom-columns='PV_NAME:.metadata.name,NFS_SERVER:.spec.nfs.server,PATH:.spec.nfs.path'
 ```
 
+### PVC with PV, StorageClass e AccessMode ###
+```
+kubectl get pvc --all-namespaces -o json | jq -r --argjson pvs "$(kubectl get pv -o json | jq '.items')" '
+  ($pvs | map({key: .metadata.name, value: .}) | from_entries) as $pvmap
+
+  | def nz($s): (if ($s // "") | tostring | length > 0 then $s else "-" end);
+
+  "NAMESPACE\tPVC\tSTATUS\tPV\tSTORAGECLASS\tACCESSMODES",
+
+  (.items[] as $pvc
+    | select( (($pvc.metadata.namespace // "") | startswith("openshift-")) | not )
+    | ($pvmap[$pvc.spec.volumeName] // null) as $pv
+    | [
+        nz($pvc.metadata.namespace),
+        nz($pvc.metadata.name),
+        nz($pvc.status.phase),
+        nz($pvc.spec.volumeName),
+        nz($pvc.spec.storageClassName // ($pv.spec.storageClassName // "")),
+        nz(
+          ( ($pvc.spec.accessModes // []) | join(",") )
+          | if length > 0 then .
+            else ( ($pv.spec.accessModes // []) | join(",") )
+            end
+        )
+      ] | @tsv
+  )
+' | column -t
+
+```
+
 ### Pod termination status & message ###
 ```
 kubectl get pod PODNAME -o jsonpath='{range .status.containerStatuses[*]}{"Container: "}{.name}{"\n  State: "}{.state.waiting.reason}{"\n  Last State: "}{.lastState.terminated.reason}{"\n\n"}{end}'
